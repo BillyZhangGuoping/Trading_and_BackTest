@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="PYTHON_MODULE" version="4">
+  <component name="NewModuleRootManager">
+    <content url="file://C:/ProgramData/anaconda3/envs/vnpy2.3/Lib/site-packages/vnpy" />
+    <content url="file://$MODULE_DIR$" />
+    <content url="file://$MODULE_DIR$/../VNPY2_BILLY" />
+    <content url="file://$MODULE_DIR$/../vnpy-2.3.0/vnpy-2.3.0/examples" />
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>
