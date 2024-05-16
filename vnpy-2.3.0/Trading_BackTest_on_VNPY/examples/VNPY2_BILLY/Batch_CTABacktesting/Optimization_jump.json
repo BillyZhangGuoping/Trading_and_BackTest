@@ -1,0 +1,25 @@
+{
+  "BT_BarBBIBOLLStrategy": {
+    "class_name": "BT_BarBBIBOLLStrategy",
+    "vt_symbol": "sp2405.SHFE",
+    "startDate": "2023-09-02",
+    "endDate": "2024-01-20",
+    "setting": {
+            "init_pos": 0,
+            "init_entry_price": 0,
+            "fixed_size": 1,
+            "HeYueJiaZhi": 100000,
+            "HeYueChengShu": 10.0,
+            "pricetick": 2,
+            "CLOSE_WINDOWS": [10,40,10],
+            "OPEN_WINDOWS": [10,40,10],
+            "TRUN_OPEN_LIMIT": [2,10,1],
+            "Kxian": 1,
+            "JUMP": 4,
+            "BBI_WINDOWS": [10,50,10],
+            "BBI_DEV": [2.5,5.0,0.5],
+            "MARK_DOWN": [4,20,3],
+            "MARK_UP": [4, 20, 3]
+        }
+  }
+}
