@@ -3,7 +3,7 @@
 from datetime import datetime, timedelta
 import jqdatasdk as jq
 import os
-from vnpy.trader.supplyment import ConfigManager
+from vnpy.addon.supplyment import ConfigManager
 
 class JQDominantCheck:
 	"""
