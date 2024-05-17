@@ -1,0 +1,1 @@
+from .JQDominantCheck import JQDominantCheck

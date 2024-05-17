@@ -1,9 +1,9 @@
 # encoding: UTF-8
-import json
+
 from datetime import datetime, timedelta
-import logging
 import jqdatasdk as jq
 import os
+from vnpy.trader.supplyment import ConfigManager
 
 class JQDominantCheck:
 	"""
@@ -12,23 +12,24 @@ class JQDominantCheck:
 
 	def __init__(self):
 		# 加载配置
-		configfile = "C:\\Users\\i333248\\.vntrader\\ZhuLiQieHuan\\JQDominantConfig.json"
-		config = open(configfile,encoding='utf-8')
-		self.setting = json.load(config)
+
+		configer = ConfigManager()
+
+		configfile = "JQDominantConfig.json"
+		self.filename = configer.build_path("zhuliheyueqiehuan.log")
+		self.filename_sequence = configer.build_path("zhuliheyueqiehuan_sequence.log")
+
+		self.setting = configer.read_config(configfile)
 
 		USERNAME = self.setting['jqdata.Username']
 		PASSWORD = self.setting['jqdata.Password']
 		self.check_days = self.setting["check_days"]
 		self.check_symbol_dict = self.setting['symbol_list']
-		# self.filename = "C:\\Users\\Administrator\\.vntrader\\zhuliheyueqiehuan.log"
-		self.filename = "C:\\Users\\i333248\\.vntrader\\ZhuLiQieHuan\\zhuliheyueqiehuan.log"
-		self.filename_sequence = "C:\\Users\\i333248\\.vntrader\\ZhuLiQieHuan\\zhuliheyueqiehuan_sequence.log"
-
 
 		if self.check_days < 1:
 			self.check_days = 1
 		self.dominant_change = False
-		self.logger = self.define_logger()
+		self.logger = configer.define_logger('check_dominant', self.filename)
 
 		try:
 			jq.auth(USERNAME, PASSWORD)
@@ -53,22 +54,6 @@ class JQDominantCheck:
 			self.logger.info("主力合约无法确定，检查合约代码")
 
 
-	def define_logger(self):
-		logger = logging.getLogger('check_dominant')
-		logger.setLevel(level=logging.INFO)
-		formatter = logging.Formatter('[%(asctime)s] %(message)s',datefmt='%Y-%m-%d %H:%M:%S')
-
-		file_handler = logging.FileHandler(
-			self.filename_sequence, mode="a", encoding="utf8"
-		)
-		file_handler.setFormatter(formatter)
-
-		stream_handler = logging.StreamHandler()
-		stream_handler.setFormatter(formatter)
-		logger.addHandler(file_handler)
-		logger.addHandler(stream_handler)
-		return logger
-
 	def query_dominant_symbols(self):
 		"""
 		Query history bar data from JQData and update Database.
@@ -80,6 +65,9 @@ class JQDominantCheck:
 		for symbol in symbol_list:
 			self.check_dominant(symbol, startdate, endDate)
 		if self.dominant_change == True:
+			if not os.path.exists(self.filename_sequence):
+				# 创建文件
+				open(self.filename_sequence, 'w').close()
 			with open(self.filename_sequence,encoding="utf-8") as f, open(self.filename, encoding="utf-8",mode='w') as fout:
 				fout.writelines(reversed(f.readlines()))
 			os.startfile(self.filename)
