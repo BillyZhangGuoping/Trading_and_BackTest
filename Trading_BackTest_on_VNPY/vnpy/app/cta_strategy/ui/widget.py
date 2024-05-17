@@ -268,9 +268,9 @@ class CtaManager(QtWidgets.QWidget):
         """
         data = event.data
 
-        if data.date < datetime.now(get_localzone()) <= (data.date + timedelta(days=1, hours=8)):
+        if data.date < datetime.now(get_localzone()) <= (data.date + timedelta(days=2, hours=8)):
             # self.managers[data.strategy].cells["pos"].setBackground(QtGui.QBrush(QtGui.QColor("blue")))
-            self.managers[data.strategy].setStyleSheet("QTableWidget{border:3px solid aqua}")
+            self.managers[data.strategy].setStyleSheet("QTableWidget{border:6px solid aqua}")
         # if self.currentStrategyName == data.strategy:
         # data.date = data.date[-4:]
         self.event_engine.put(Event(EVENT_CTA_DISPLAY_TRADE, data))
@@ -712,7 +712,7 @@ class StrategyManager(QtWidgets.QFrame):
                 "平均每次盈利/-平均每次亏损": tradeResultDict['profitLossRatio'],
                 "最多连续赢几次": tradeResultDict['max_win_count'],
                 "最多连续输几次": tradeResultDict['max_lose_count'],
-                "总盈利/总亏损": -tradeResultDict['totalWinning'] / tradeResultDict['totalLosing'],
+                "总盈利/总亏损": -tradeResultDict['totalWinning'] / max(1, tradeResultDict['totalLosing']),
                 "收益STD": tradeResultDict['returnStd'],
 
             }
@@ -1118,8 +1118,10 @@ class DataMonitor(QtWidgets.QTableWidget):
         """"""
         labels = list(self._data.keys())
         self.setRowCount(len(labels))
+        # self.setHorizontalHeaderLabels(labels)
         self.setVerticalHeaderLabels(labels)
-        self.setFixedHeight(200)
+        # self.setMaximumWidth(100)
+        self.setFixedHeight(180)
 
         self.setColumnCount(1)
         self.horizontalHeader().setSectionResizeMode(

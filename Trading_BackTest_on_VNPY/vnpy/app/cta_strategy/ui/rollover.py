@@ -1,30 +1,29 @@
 from datetime import datetime
-from threading import Timer
 from time import sleep
 from typing import TYPE_CHECKING
-
+from vnpy.app.algo_trading import AlgoTradingApp
+from vnpy.trader.engine import MainEngine
+from vnpy.trader.constant import OrderType
+from vnpy.trader.object import ContractData, OrderRequest, SubscribeRequest, TickData
+from vnpy.trader.object import Direction, Offset
 # from vnpy.trader.ui import QtWidgets
 from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont
-from PyQt5.QtWidgets import (QMessageBox, QFrame,
-                             QWizard, QWizardPage, QVBoxLayout, QGridLayout,
-                             QLabel)
-from vnpy.trader.constant import OrderType
+from PyQt5.QtCore import Qt, QCoreApplication
+from PyQt5.QtGui import QPixmap, QColor, QFont
+from PyQt5.QtWidgets import (QApplication, QWidget, QPushButton, QStyle, QMessageBox, QFrame,
+                             QWizard, QWizardPage, QVBoxLayout, QPlainTextEdit, QGridLayout,
+                             QLabel, QLineEdit)
+
 from vnpy.trader.converter import OffsetConverter, PositionHolding
-from vnpy.trader.database import database_manager
-from vnpy.trader.engine import MainEngine
+from vnpy.trader.constant import Status
+from vnpy.trader.utility import round_to
 from vnpy.trader.event import (
     EVENT_TRADE
 )
-from vnpy.trader.object import ContractData, OrderRequest, SubscribeRequest, TickData
-from vnpy.trader.object import Direction, Offset
-from vnpy.trader.utility import round_to
-
-from ..base import StopOrder, StopOrderStatus
 from ..engine import CtaEngine, APP_NAME
 from ..template import CtaTemplate
-
+from vnpy.event import Event
+from threading import Timer
 if TYPE_CHECKING:
     from .widget import CtaManager
 
@@ -81,9 +80,11 @@ class WizardPage1(QWizardPage):
                                                self.strategy_table.rollover_strategies_name]
             self.parent.old_symbol = self.old_symbol_combo.currentText()
             if not self.new_symbol_line.text():
+                # self.setTitle("移仓目标合约为空")
                 QMessageBox.warning(self, '信息', '移仓目标合约为空')
                 return False
             elif self.parent.old_symbol == self.new_symbol_line.text():
+                # self.setTitle("移仓目标重复")
                 QMessageBox.warning(self, '信息', '移仓目标重复')
                 return False
             new_symbol = self.new_symbol_line.text()
@@ -174,10 +175,9 @@ class WizardPage2(QWizardPage):
         self.account_net_pos = 0
         self._conclusion_list = {
             0: "持仓待更新",
-            1: "策略净持仓和账户合约净持仓相等, 账户单向持仓，可净仓模式移仓",
-            2: "账户双向持仓，不可净仓模式移仓",
-            3: "账户单向持仓,但策略净持仓大于账户合约净持仓，不可净仓模式移仓",
-            4: "账户单向持仓，选择策略净持仓小于账户合约净持仓，可净仓模式移仓"
+            1: "策略净持仓和账户合约净持仓相等, 账户单向持仓，净仓模式",
+            2: "策略净持仓和账户合约净持仓相等, 账户双向持仓",
+            3: "策略净持仓和账户合约净持仓存在差异"
 
         }
         self.conclusion = 0
@@ -222,14 +222,11 @@ class WizardPage2(QWizardPage):
         self.max_order_count_spin.setValue(100)
         self.wait_time_spin = QtWidgets.QSpinBox()
         self.wait_time_spin.setRange(0, 10000)
-        self.payup_spin = QtWidgets.QSpinBox()
-        self.payup_spin.setRange(-1,50000)
-        self.payup_spin.setValue(2)
+        # self.payup_spin.setValue(2)
         self.wait_time_spin.setValue(3)
         form.addRow("交易单笔限额 ", self.max_order_count_spin)
-        form.addRow("移仓发单超价", self.payup_spin)
-        form.addRow(QLabel("超价设为 -1 时，按市价单发单"))
         form.addRow("单笔成交后等待(秒)", self.wait_time_spin)
+        # form.addRow(QLabel("市价单发单"))
         frame2.setLayout(form)
 
         AllvLayout.addWidget(frame)
@@ -264,38 +261,22 @@ class WizardPage2(QWizardPage):
         self.accnout_negative_info.setText(f"账户空仓共： {abs(self.account_negative_pos)}")
         self.accnout_net_info.setText(f"账户净持仓共： {self.account_net_pos}")
 
-        # if self.account_net_pos == self.strategy_net_pos and (
-        #         self.account_negative_pos == 0 or self.account_positive_pos == 0):
-        #     self.conclusion = 1
-        #     self.parent.move_position = self.strategy_net_pos
-        # elif self.account_net_pos == self.strategy_net_pos and self.account_negative_pos != 0 and self.account_positive_pos != 0:
-        #     self.conclusion = 2
-        # elif (self.account_net_pos > self.strategy_net_pos or self.account_net_pos > self.strategy_net_pos):
-        #     self.conclusion = 3
-
-        if self.account_negative_pos == 0 or self.account_positive_pos == 0:
-            if self.account_net_pos == self.strategy_net_pos:
-                self.conclusion = 1
-                self.parent.move_position = self.strategy_net_pos
-            elif abs(self.strategy_net_pos) < abs(self.account_net_pos) and self.strategy_net_pos*self.account_net_pos>=0:
-                self.conclusion = 4
-                self.parent.move_position = self.strategy_net_pos
-            else:
-                self.conclusion = 3
-        else:
+        if self.account_net_pos == self.strategy_net_pos and (
+                self.account_negative_pos == 0 or self.account_positive_pos == 0):
+            self.conclusion = 1
+            self.parent.move_position = self.strategy_net_pos
+        elif self.account_net_pos == self.strategy_net_pos and self.account_negative_pos != 0 and self.account_positive_pos != 0:
             self.conclusion = 2
-
-
-
+        elif self.account_net_pos != self.strategy_net_pos:
+            self.conclusion = 3
 
         self.conclusion_info.setText(self._conclusion_list[self.conclusion])
 
     def validatePage(self):
 
-        if self.conclusion == 1 or self.conclusion == 4:
+        if self.conclusion == 1:
             self.parent.ROLL_OVER_MAX = self.max_order_count_spin.value()
             self.parent.trade_wait_time = self.wait_time_spin.value()
-            self.parent.payup = self.payup_spin.value()
             return True
         else:
             QMessageBox.warning(self, '信息', self._conclusion_list[self.conclusion])
@@ -310,6 +291,7 @@ class WizardPage3(QWizardPage):
         self.init_ui()
 
     def init_ui(self):
+
         self.setTitle("移仓交易")
         self.setMinimumHeight(600)
         vboxLayout = QtWidgets.QVBoxLayout()
@@ -357,15 +339,14 @@ class WizardPage3(QWizardPage):
         self.parent.send_count = len(self.parent.request_split_list)
 
 
-        sendMessage = "按照市价" if self.parent.payup < 0 else "市场价格加超价" + str(self.parent.payup)
         if self.parent.send_count > 0:
 
             self.roll_over_info.setText(f"移仓手数： {self.parent.move_position}； 发单限额： {self.parent.ROLL_OVER_MAX} \n" +
-                                        f"交易将会分: {self.parent.send_count} 次发出; 每次笔数为 {self.parent.request_split_list} \n"+
-                                        sendMessage + f"发单, 每个交易完成后等待{self.parent.trade_wait_time}秒\n")
+                                        f"交易将会分: {self.parent.send_count} 次发出; 每次笔数为 {self.parent.request_split_list} \n"
+                                        f"按照市价发单, 每个交易完成后等待{self.parent.trade_wait_time}秒\n")
         elif self.parent.move_position !=0:
             self.roll_over_info.setText(f"交易将会单次发出; 按当前"
-                                        + sendMessage + f"发单")
+                                        f"市价发单")
         elif self.parent.move_position ==0:
             self.roll_over_info.setText(f"无需交易，仅作策略合约切换")
 
@@ -393,7 +374,7 @@ class RolloverTool(QWizard):
         self.send_count = 0
         self.request_split_list = []
         self.request_count = 0
-        self.payup = 0
+        self.payup = 2
         self.trade_wait_time = 3
         self.deal_volume = 0
         self.priceTick = 0
@@ -426,6 +407,15 @@ class RolloverTool(QWizard):
         # self.trade_signal.connect(self.process_trade_event)
         self.event_engine.register(EVENT_TRADE, self.process_trade_event)
 
+
+    # def process_order_event(self, event):
+    #   """"""
+    #   order = event.data
+    #   if order.vt_orderid in self.old_vt_orderids and order.status == Status.ALLTRADED:
+    #       self.old_vt_orderids_complete += 1
+    #
+    #   if order.vt_orderid in self.new_vt_orderids and order.status == Status.ALLTRADED:
+    #       self.new_vt_orderids_complete += 1
 
     def process_trade_event(self, event):
         trade = event.data
@@ -475,18 +465,32 @@ class RolloverTool(QWizard):
         # 去掉帮助按钮
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
         # 窗口最小化
-
-        self.setWindowFlags(Qt.WindowMinimizeButtonHint|Qt.WindowCloseButtonHint)
+        self.setWindowFlags(Qt.WindowMinimizeButtonHint | Qt.WindowCloseButtonHint)
         # 设置导航样式
         self.setWizardStyle(QWizard.ModernStyle)
         # 设置导航窗口标题
         self.setWindowTitle("移仓助手")
+
+        # self.setWindowModality(Qt.ApplicationModal)
 
         # 去掉页面的一些按钮
         self.setOption(QWizard.NoBackButtonOnStartPage)  # 首页没有回退按钮
         # self.setOption(QWizard.NoBackButtonOnLastPage)  # 最后一页没有回退按钮
         self.setOption(QWizard.NoCancelButton)  # 没有取消按钮
 
+        # # 设置导航栏背景标题
+        # pix = QPixmap(640, 64)
+        # pix.fill(QColor(52, 104, 192))
+        # self.setPixmap(QWizard.BannerPixmap, pix)
+
+        # # 设置标题栏图标
+        # pix = QPixmap(os.path.dirname(__file__) + "/python.png")
+        # self.setPixmap(QWizard.LogoPixmap, pix.scaled(48, 48))
+
+        # 设置页面主标题显示格式
+        self.setTitleFormat(Qt.RichText)
+        # # 设置子标题显示格式
+        # self.setSubTitleFormat(Qt.RichText)
 
         # 设置按钮的显示名称
         self.setButtonText(QWizard.NextButton, '下一步')
@@ -577,8 +581,8 @@ class RolloverTool(QWizard):
 
         if holding.long_pos:
             # if holding.long_pos != self.move_position:
-            # 	QMessageBox.warning(self, '信息', f"账户持仓数量改变，请退回")
-            # 	return
+            #   QMessageBox.warning(self, '信息', f"账户持仓数量改变，请退回")
+            #   return
 
             self.old_vt_orderids = self.send_order(
                 old_symbol,
@@ -599,8 +603,8 @@ class RolloverTool(QWizard):
         # Roll short postiion
         if holding.short_pos:
             # if holding.short_pos != self.move_position:
-            # 	QMessageBox.warning(self, '信息', f"账户持仓数量改变，请退回")
-            # 	return
+            #   QMessageBox.warning(self, '信息', f"账户持仓数量改变，请退回")
+            #   return
 
             self.old_vt_orderids = self.send_order(
                 old_symbol,
@@ -634,6 +638,15 @@ class RolloverTool(QWizard):
 
         check_Timer = Timer(5, self.check_update_strategies)
         check_Timer.start()
+    # self.setEnabled(False)
+    # for new_strategy in self.new_strategies:
+    #   while not new_strategy.inited:
+    #       sleep(2)
+    #   self.cta_engine.start_strategy(new_strategy.strategy_name)
+    #   self.write_log(f"更新策略 [{new_strategy.strategy_name}] 初始化完成，启动完成")
+    # self.write_log(f"==========={self.old_symbol} -> {self.new_symbol} 移仓完成 ============")
+    #
+    # self.setEnabled(True)
 
     def check_update_strategies(self):
         if self.new_strategies:
@@ -666,16 +679,12 @@ class RolloverTool(QWizard):
             new_price = 0
 
 
-
-
         # Remove old strategy
         result = self.cta_engine.remove_strategy(name)
         if result:
             self.cta_manager.remove_strategy(name)
 
-
         self.write_log(f"移除老策略 [{name}] [{strategy.vt_symbol}],仓位:{strategy.pos}, 原价格:{strategy.PosPrice}")
-
 
         # Add new strategy
         if ("init_pos" in parameters) and ("init_entry_price" in parameters):
@@ -690,11 +699,11 @@ class RolloverTool(QWizard):
             vt_local,
             parameters
         )
-
+        # self.write_log(f"创建策略 [{name}] [{vt_symbol}]")
 
         # Init new strategy
         self.cta_engine.init_strategy(name)
-
+        # self.write_log(f"初始化策略 [{name}] [{vt_symbol}]")
 
         # Update pos to new strategy
         new_strategy: CtaTemplate = self.cta_engine.strategies[name]
@@ -704,59 +713,6 @@ class RolloverTool(QWizard):
         self.cta_engine.put_strategy_event(new_strategy)
         self.new_strategies.append(new_strategy)
         self.write_log(f"更新策略 [{name}] [{vt_symbol}]完成,仓位:{new_strategy.pos}, 价格:{new_price}")
-
-        # Save close and open dummy deal to database
-        if strategy.pos == 0:
-            return
-        elif strategy.pos > 0:
-            close_old_direction = Direction.SHORT
-            open_new_direction = Direction.LONG
-        elif strategy.pos < 0:
-            close_old_direction = Direction.LONG
-            open_new_direction = Direction.SHORT
-
-        dummy_close_old_strategy_order = StopOrder(
-            vt_symbol= strategy.vt_symbol,
-            direction = close_old_direction,
-            offset = Offset.CLOSE,
-            price = strategy.PosPrice,
-            volume = pos,
-            stop_orderid = f"{name}_{strategy.vt_symbol}_{vt_symbol}_Rollover",
-            strategy_name = name,
-            datetime = datetime.now(),
-            lock = False,
-            net = False,
-            vt_orderids = [],
-            status = StopOrderStatus.TRIGGERED
-        )
-        dummy_close_old_strategy_order.completed_volume = pos
-        dummy_close_old_strategy_order.average_price = strategy.PosPrice
-        dummy_close_old_strategy_order.first_price = strategy.PosPrice
-        dummy_close_old_strategy_order.triggered_price = strategy.PosPrice
-        database_manager.save_triggered_stop_order_data(dummy_close_old_strategy_order)
-
-        dummy_open_new_strategy_order = StopOrder(
-            vt_symbol= vt_symbol,
-            direction = open_new_direction,
-            offset = Offset.OPEN,
-            price = new_price,
-            volume = pos,
-            stop_orderid = f"{name}_{strategy.vt_symbol}_{vt_symbol}_Rollover",
-            strategy_name = name,
-            datetime = datetime.now(),
-            lock = False,
-            net = False,
-            vt_orderids = [],
-            status = StopOrderStatus.TRIGGERED
-        )
-        dummy_open_new_strategy_order.completed_volume = pos
-        dummy_open_new_strategy_order.average_price = new_price
-        dummy_open_new_strategy_order.first_price = new_price
-        dummy_open_new_strategy_order.triggered_price = new_price
-        database_manager.save_triggered_stop_order_data(dummy_open_new_strategy_order)
-        self.write_log(f"虚拟单已经录入数据库")
-
-
 
 
     def send_order(
@@ -774,22 +730,16 @@ class RolloverTool(QWizard):
         tick: TickData = self.main_engine.get_tick(vt_symbol)
         offset_converter: OffsetConverter = self.cta_engine.offset_converter
 
-        if self.payup >= 0:
-            if direction == Direction.LONG:
-                price = tick.ask_price_1 + contract.pricetick * payup
+        if direction == Direction.LONG:
+            if tick.limit_up:
+                price = tick.limit_up
             else:
-                price = tick.bid_price_1 - contract.pricetick * payup
+                price = tick.ask_price_5
         else:
-            if direction == Direction.LONG:
-                if tick.limit_up:
-                    price = tick.limit_up
-                else:
-                    price = tick.ask_price_5
+            if tick.limit_down:
+                price = tick.limit_down
             else:
-                if tick.limit_down:
-                    price = tick.limit_down
-                else:
-                    price = tick.bid_price_5
+                price = tick.bid_price_5
 
         original_req: OrderRequest = OrderRequest(
             symbol=contract.symbol,

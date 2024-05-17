@@ -13,8 +13,6 @@ from queue import Empty, Queue
 from threading import Thread
 from typing import Any, Sequence, Type, Dict, List, Optional
 from PyQt5 import QtWidgets
-from .event import EVENT_TIMER
-import sched
 from vnpy.event import Event, EventEngine
 from .app import BaseApp
 from natsort import natsorted
