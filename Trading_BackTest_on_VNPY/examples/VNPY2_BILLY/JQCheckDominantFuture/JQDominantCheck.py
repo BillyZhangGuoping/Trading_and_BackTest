@@ -77,6 +77,11 @@ class JQDominantCheck:
 		for symbol in symbol_list:
 			self.check_dominant(symbol, startdate, endDate)
 		if self.dominant_change == True:
+			# if not os.path.exists(self.filename_sequence):
+			# 	# 创建文件
+			# 	open(self.filename_sequence, 'w').close()
+			# with open(self.filename_sequence,encoding="utf-8") as f, open(self.filename, encoding="utf-8",mode='w') as fout:
+			# 	fout.writelines(reversed(f.readlines()))
 			os.startfile(self.filename)
 
 	def to_vq_symbol(self, symbol_exchange):

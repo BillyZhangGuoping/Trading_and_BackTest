@@ -29,7 +29,7 @@ class JQDominantCheck:
 		if self.check_days < 1:
 			self.check_days = 1
 		self.dominant_change = False
-		self.logger = configer.define_logger('check_dominant', self.filename)
+		self.logger = configer.define_logger('check_dominant', self.filename_sequence)
 
 		try:
 			jq.auth(USERNAME, PASSWORD)
@@ -65,12 +65,14 @@ class JQDominantCheck:
 		for symbol in symbol_list:
 			self.check_dominant(symbol, startdate, endDate)
 		if self.dominant_change == True:
-			if not os.path.exists(self.filename_sequence):
+			if not os.path.exists(self.filename):
 				# 创建文件
-				open(self.filename_sequence, 'w').close()
-			with open(self.filename_sequence,encoding="utf-8") as f, open(self.filename, encoding="utf-8",mode='w') as fout:
-				fout.writelines(reversed(f.readlines()))
-			os.startfile(self.filename)
+				open(self.filename, 'w').close()
+			if self.dominant_change == True:
+				with open(self.filename_sequence, encoding="utf-8") as f, open(self.filename, encoding="utf-8",
+																			   mode='w') as fout:
+					fout.writelines(reversed(f.readlines()))
+				os.startfile(self.filename)
 
 	def to_vn_symbol(self, symbol_exchange):
 		"""
