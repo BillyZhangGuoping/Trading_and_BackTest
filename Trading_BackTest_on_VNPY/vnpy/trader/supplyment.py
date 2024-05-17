@@ -51,7 +51,6 @@ class ConfigManager:
             log_filename, mode="a", encoding="utf8"
         )
         file_handler.setFormatter(formatter)
-
         stream_handler = logging.StreamHandler()
         stream_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
