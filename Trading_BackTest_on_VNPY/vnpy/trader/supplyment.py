@@ -43,7 +43,7 @@ class ConfigManager:
             json.dump(config_data, f, indent=4)  # 使用 4 个空格缩进
 
     def define_logger(self, logger_name, log_filename):
-        logger = logging.getLogger('check_dominant')
+        logger = logging.getLogger(logger_name)
         logger.setLevel(level=logging.INFO)
         formatter = logging.Formatter('[%(asctime)s] %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 
