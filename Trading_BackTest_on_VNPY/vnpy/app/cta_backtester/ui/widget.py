@@ -486,7 +486,7 @@ class BacktesterManager(QtWidgets.QWidget):
     def start_optimization(self):
         """"""
         class_name = self.class_combo.currentText()
-        vt_symbol = self.symbol_line.currentText()
+        vt_symbol = self.symbol_line.text()
         interval = self.interval_combo.currentText()
         start = self.start_date_edit.dateTime().toPyDateTime()
         end = self.end_date_edit.dateTime().toPyDateTime()
@@ -546,7 +546,7 @@ class BacktesterManager(QtWidgets.QWidget):
 
     def start_downloading(self):
         """"""
-        vt_symbol = self.symbol_line.currentText()
+        vt_symbol = self.symbol_line.text()
         interval = self.interval_combo.currentText()
         start_date = self.start_date_edit.date()
         end_date = self.end_date_edit.date()
@@ -754,92 +754,92 @@ class StatisticsMonitor(QtWidgets.QTableWidget):
             value = data.get(key, "")
             cell.setText(str(value))
 
-class OLD_StatisticsMonitor(QtWidgets.QTableWidget):
-    """"""
-    KEY_NAME_MAP = {
-        "回测年数": "回测年数",
-        "净利润": "净利润",
-        "年均净利润": "年均净利润",
-        "年均交易次数": "年均交易次数",
-        "总盈利": "总盈利",
-        "总亏损": "总亏损",
-        "总交易次数": "总交易次数",
-        "盈利率": "盈利率",
-        "交易胜率": "交易胜率",
-        "盈利交易次数": "盈利交易次数",
-        "亏损交易次数": "亏损交易次数",
-        "平均每次交易": "平均每次交易",
-        "平均每次盈利": "平均每次盈利",
-        "平均每次亏损": "平均每次亏损",
-        "平均每次盈利/-平均每次亏损": "平均每次盈利/-平均每次亏损",
-        "最多连续赢几次": "最多连续赢几次",
-        "最多连续输几次": "最多连续输几次",
-        "最大日内回撤": "最大日内回撤",
-        "最大日内回撤百分比": "最大日内回撤百分比",
-        "总盈利/总亏损": "总盈利/总亏损",
-        "平仓回撤": "平仓回撤",
-        "夏普比例": "夏普比例"
-    }
-
-    def __init__(self):
-        """"""
-        super().__init__()
-
-        self.cells = {}
-
-        self.init_ui()
-
-    def init_ui(self):
-        """"""
-        self.setRowCount(len(self.KEY_NAME_MAP))
-        self.setVerticalHeaderLabels(list(self.KEY_NAME_MAP.values()))
-
-        self.setColumnCount(1)
-        self.horizontalHeader().setVisible(False)
-        self.horizontalHeader().setSectionResizeMode(
-            QtWidgets.QHeaderView.Stretch
-        )
-        self.setEditTriggers(self.NoEditTriggers)
-
-        for row, key in enumerate(self.KEY_NAME_MAP.keys()):
-            cell = QtWidgets.QTableWidgetItem()
-            self.setItem(row, 0, cell)
-            self.cells[key] = cell
-
-    def clear_data(self):
-        """"""
-        for cell in self.cells.values():
-            cell.setText("")
-
-    def set_data(self, data):
-        """"""
-        data = data[0]
-
-        data["回测年数"] = f"{data['回测年数']:,.2f}"
-        data["净利润"] = f"{data['净利润']:,.2f}"
-        data["年均净利润"] = f"{data['年均净利润']}"
-        data["年均交易次数"] = f"{data['年均交易次数']}"
-        data["总盈利"] = f"{data['总盈利']:,.2f}"
-        data["总亏损"] = f"{data['总亏损']:,.2f}"
-        data["盈利率"] = data['盈利率']
-        data["交易胜率"] = data['交易胜率']
-        data["盈利交易次数"] = f"{data['盈利交易次数']}"
-        data["亏损交易次数"] = f"{data['亏损交易次数']}"
-        data["平均每次交易"] = f"{data['平均每次交易']:,.2f}"
-        data["平均每次盈利"] = f"{data['平均每次盈利']:,.2f}"
-        data["平均每次亏损"] = f"{data['平均每次亏损']:,.2f}"
-        data["平均每次盈利/-平均每次亏损"] = f"{data['平均每次盈利/-平均每次亏损']:,.2f}"
-        data["最多连续赢几次"] = f"{data['最多连续赢几次']:}"
-        data["最多连续输几次"] = f"{data['最多连续输几次']}"
-        data["最大日内回撤"] = f"{data['最大日内回撤']:,.2f}"
-        data["最大日内回撤百分比"] = f"{data['最大日内回撤百分比']:,.2f}"
-        data["总盈利/总亏损"] = f"{data['总盈利/总亏损']:,.2f}"
-        data["平仓回撤"] = f"{data['平仓回撤']:,.2f}"
-        data["夏普比例"] = f"{data['夏普比例']:,.2f}"
-
-        for key, cell in self.cells.items():
-            value = data.get(key, "")
-            cell.setText(str(value))
+# class OLD_StatisticsMonitor(QtWidgets.QTableWidget):
+#     """"""
+#     KEY_NAME_MAP = {
+#         "回测年数": "回测年数",
+#         "净利润": "净利润",
+#         "年均净利润": "年均净利润",
+#         "年均交易次数": "年均交易次数",
+#         "总盈利": "总盈利",
+#         "总亏损": "总亏损",
+#         "总交易次数": "总交易次数",
+#         "盈利率": "盈利率",
+#         "交易胜率": "交易胜率",
+#         "盈利交易次数": "盈利交易次数",
+#         "亏损交易次数": "亏损交易次数",
+#         "平均每次交易": "平均每次交易",
+#         "平均每次盈利": "平均每次盈利",
+#         "平均每次亏损": "平均每次亏损",
+#         "平均每次盈利/-平均每次亏损": "平均每次盈利/-平均每次亏损",
+#         "最多连续赢几次": "最多连续赢几次",
+#         "最多连续输几次": "最多连续输几次",
+#         "最大日内回撤": "最大日内回撤",
+#         "最大日内回撤百分比": "最大日内回撤百分比",
+#         "总盈利/总亏损": "总盈利/总亏损",
+#         "平仓回撤": "平仓回撤",
+#         "夏普比例": "夏普比例"
+#     }
+#
+#     def __init__(self):
+#         """"""
+#         super().__init__()
+#
+#         self.cells = {}
+#
+#         self.init_ui()
+#
+#     def init_ui(self):
+#         """"""
+#         self.setRowCount(len(self.KEY_NAME_MAP))
+#         self.setVerticalHeaderLabels(list(self.KEY_NAME_MAP.values()))
+#
+#         self.setColumnCount(1)
+#         self.horizontalHeader().setVisible(False)
+#         self.horizontalHeader().setSectionResizeMode(
+#             QtWidgets.QHeaderView.Stretch
+#         )
+#         self.setEditTriggers(self.NoEditTriggers)
+#
+#         for row, key in enumerate(self.KEY_NAME_MAP.keys()):
+#             cell = QtWidgets.QTableWidgetItem()
+#             self.setItem(row, 0, cell)
+#             self.cells[key] = cell
+#
+#     def clear_data(self):
+#         """"""
+#         for cell in self.cells.values():
+#             cell.setText("")
+#
+#     def set_data(self, data):
+#         """"""
+#         data = data[0]
+#
+#         data["回测年数"] = f"{data['回测年数']:,.2f}"
+#         data["净利润"] = f"{data['净利润']:,.2f}"
+#         data["年均净利润"] = f"{data['年均净利润']}"
+#         data["年均交易次数"] = f"{data['年均交易次数']}"
+#         data["总盈利"] = f"{data['总盈利']:,.2f}"
+#         data["总亏损"] = f"{data['总亏损']:,.2f}"
+#         data["盈利率"] = data['盈利率']
+#         data["交易胜率"] = data['交易胜率']
+#         data["盈利交易次数"] = f"{data['盈利交易次数']}"
+#         data["亏损交易次数"] = f"{data['亏损交易次数']}"
+#         data["平均每次交易"] = f"{data['平均每次交易']:,.2f}"
+#         data["平均每次盈利"] = f"{data['平均每次盈利']:,.2f}"
+#         data["平均每次亏损"] = f"{data['平均每次亏损']:,.2f}"
+#         data["平均每次盈利/-平均每次亏损"] = f"{data['平均每次盈利/-平均每次亏损']:,.2f}"
+#         data["最多连续赢几次"] = f"{data['最多连续赢几次']:}"
+#         data["最多连续输几次"] = f"{data['最多连续输几次']}"
+#         data["最大日内回撤"] = f"{data['最大日内回撤']:,.2f}"
+#         data["最大日内回撤百分比"] = f"{data['最大日内回撤百分比']:,.2f}"
+#         data["总盈利/总亏损"] = f"{data['总盈利/总亏损']:,.2f}"
+#         data["平仓回撤"] = f"{data['平仓回撤']:,.2f}"
+#         data["夏普比例"] = f"{data['夏普比例']:,.2f}"
+#
+#         for key, cell in self.cells.items():
+#             value = data.get(key, "")
+#             cell.setText(str(value))
 
 
 class BacktestingSettingEditor(QtWidgets.QDialog):

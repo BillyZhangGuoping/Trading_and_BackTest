@@ -1,15 +1,14 @@
 import json
 import jqdatasdk as jq
-from vnpy.addon.supplyment import ConfigManager
 from vnpy.trader.mddata import mddata_client
-class FuturesHandler:
+from datetime import datetime
+
+class HotFuturesHandler:
 
     def __init__(self, hot_code):
+        """"""
         self.hot_code = hot_code.upper()
-        configer = ConfigManager()
-        configfile = "JQDominantConfig.json"
         mddata_client.init()
-        self.setting = configer.read_config(configfile)
 
     def get_daily_contracts(self, start_date, end_date):
         """使用 jqdatasdk 获取每日合约的方法"""
@@ -30,8 +29,8 @@ class FuturesHandler:
             if contract!= current_contract:
                 if current_contract is not None:
                     result.append({
-                        "start_date": start_date,
-                        "end_date": date,
+                        "start_date": datetime.strptime(start_date, '%Y-%m-%d'),
+                        "end_date": datetime.strptime(date, '%Y-%m-%d'),
                         "contract_code": mddata_client.to_vn_symbol(current_contract)
                     })
                 current_contract = contract
@@ -39,8 +38,8 @@ class FuturesHandler:
 
         if current_contract is not None:
             result.append({
-                "start_date": start_date,
-                "end_date": "None",
+                "start_date": datetime.strptime(start_date, '%Y-%m-%d'),
+                "end_date": datetime.now(),
                 "contract_code": mddata_client.to_vn_symbol(current_contract)
             })
 
@@ -75,6 +74,6 @@ class FuturesHandler:
             return None
 
 if __name__=='__main__':
-    hot_handler = FuturesHandler('i')
+    hot_handler = HotFuturesHandler('i')
     hotlist = hot_handler.get_daily_contracts("2021-5-12","2024-4-1")
     print(hotlist)

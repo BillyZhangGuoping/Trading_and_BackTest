@@ -1,7 +1,7 @@
 import os
 import importlib
 import traceback
-from datetime import datetime
+from datetime import datetime, timedelta
 from threading import Thread
 from pathlib import Path
 from inspect import getfile
@@ -19,6 +19,8 @@ from vnpy.app.cta_strategy.backtesting import (
     BacktestingEngine, OptimizationSetting, BacktestingMode
 )
 from tzlocal import get_localzone
+from vnpy.addon.hotfutures import HotFuturesHandler
+
 LOCAL_TZ = get_localzone()
 APP_NAME = "CtaBacktester"
 
@@ -62,7 +64,7 @@ class BacktesterEngine(BaseEngine):
 
     def init_rqdata(self):
         """
-        Init RQData client.
+        Init JQData client.
         """
         result = mddata_client.init()
         md_data_api = SETTINGS["mddata.api"]
@@ -386,66 +388,91 @@ class BacktesterEngine(BaseEngine):
         end: datetime
     ):
         """
-        Query bar data from RQData.
+        Query bar data from JQData.
         """
-        self.write_log(f"{vt_symbol}-{interval}开始下载历史数据")
 
-        try:
-            symbol, exchange = extract_vt_symbol(vt_symbol)
-        except ValueError:
-            self.write_log(f"{vt_symbol}解析失败，请检查交易所后缀")
-            self.thread = None
-            return
+        hot_symbol, hot_exchange = vt_symbol.split(".")
+        if hot_exchange == "HOT":
+            hot_handler = HotFuturesHandler(hot_symbol)
+            download_list = hot_handler.get_daily_contracts(start,end)
+            self.write_log(f"{vt_symbol}-对应的主力合约分别为：")
+            for query_item in download_list:
+                self.write_log(f"从{self.convertTime(query_item['start_date'])} 到 {self.convertTime(query_item['end_date'])} 的"
+                               f"主力合约是 {query_item['contract_code']}")
+                query_item['start_date'] = query_item['start_date'] - timedelta(days = 60)
 
-        req = HistoryRequest(
-            symbol=symbol,
-            exchange=exchange,
-            interval=Interval(interval),
-            start=start,
-            end=end
-        )
+        else:
+            download_list = [{'start_date': start, 'end_date': end, 'contract_code': vt_symbol}]
 
-        contract = self.main_engine.get_contract(vt_symbol)
+        for query_item in download_list:
+            start = query_item['start_date'].astimezone(LOCAL_TZ)
+            end = query_item['end_date'].astimezone(LOCAL_TZ)
+            vt_symbol = query_item['contract_code']
 
-        try:
-            # If history data provided in gateway, then query
-            if contract and contract.history_data:
-                data = self.main_engine.query_history(
-                    req, contract.gateway_name
-                )
-            # Otherwise use RQData to query data
-            else:
-                bar_start = None
-                bar_end = None
-                bar_overview_list = database_manager.get_bar_overview()
-                for bar_overview in bar_overview_list:
-                    if bar_overview.symbol == symbol and bar_overview.exchange == exchange and bar_overview.interval == Interval(interval):
-                        bar_start = bar_overview.start.astimezone(LOCAL_TZ)
-                        bar_end = bar_overview.end.astimezone(LOCAL_TZ)
-                        if bar_start <= start:
-                            req = HistoryRequest(
-                                symbol=symbol,
-                                exchange=exchange,
-                                interval=Interval(interval),
-                                start=bar_end,
-                                end=end
-                            )
-            data = mddata_client.query_history(req)
+            self.write_log(f"{vt_symbol}-{interval}开始下载历史数据")
 
-            if data:
-                database_manager.save_bar_data(data)
-                if bar_end:
-                    self.write_log(f"{symbol}.{exchange}-{interval}，数据库已有 {self.convertTime(bar_start)} 到 {bar_end}数据，从 {self.convertTime(bar_end)} 到{self.convertTime(end)}历史数据下载完成")
+            try:
+                symbol, exchange = extract_vt_symbol(vt_symbol)
+            except ValueError:
+                self.write_log(f"{vt_symbol}解析失败，请检查交易所后缀")
+                self.thread = None
+                return
+
+            req = HistoryRequest(
+                symbol=symbol,
+                exchange=exchange,
+                interval=Interval(interval),
+                start=start,
+                end=end
+            )
+
+            contract = self.main_engine.get_contract(vt_symbol)
+
+            try:
+                # If history data provided in gateway, then query
+                if contract and contract.history_data:
+                    data = self.main_engine.query_history(
+                        req, contract.gateway_name
+                    )
+                # Otherwise use RQData to query data
                 else:
-                    self.write_log(
-                        f"{symbol}.{exchange}-{interval}，从 {self.convertTime(start)} 到{self.convertTime(end)}历史数据下载完成")
-                self.write_log(f"{vt_symbol}-{interval}历史数据下载完成")
-            else:
-                self.write_log(f"数据下载失败，无法获取{vt_symbol}的历史数据")
-        except Exception:
-            msg = f"数据下载失败，触发异常：\n{traceback.format_exc()}"
-            self.write_log(msg)
+                    bar_start = None
+                    bar_end = None
+                    bar_overview_list = database_manager.get_bar_overview()
+                    for bar_overview in bar_overview_list:
+                        if bar_overview.symbol == symbol and bar_overview.exchange == exchange and bar_overview.interval == Interval(interval):
+                            bar_start = bar_overview.start.astimezone(LOCAL_TZ)
+                            bar_end = bar_overview.end.astimezone(LOCAL_TZ)
+                            if bar_start <= start:
+                                req = HistoryRequest(
+                                    symbol=symbol,
+                                    exchange=exchange,
+                                    interval=Interval(interval),
+                                    start=bar_end,
+                                    end=end
+                                )
+                data = mddata_client.query_history(req)
 
+                if data:
+                    database_manager.save_bar_data(data)
+                    if bar_end:
+                        self.write_log(
+                            f"{symbol}，数据库已有 {self.convertTime(bar_start)} 到 {bar_end}数据，从 {self.convertTime(bar_end)} 到{self.convertTime(end)}历史数据下载完成")
+                    else:
+                        self.write_log(
+                            f"{symbol}，从 {self.convertTime(start)} 到{self.convertTime(end)}历史数据下载完成")
+                else:
+                    if bar_end:
+                        self.write_log(
+                            f"{symbol}，数据库已有 {self.convertTime(bar_start)} 到 {self.convertTime(bar_end)}数据，从 {self.convertTime(bar_end)} 到{self.convertTime(end)}或无历史数据")
+                    else:
+                        self.write_log(
+                            f"{symbol}，从 {self.convertTime(start)} 到{self.convertTime(end)}历史数据下载失败")
+
+            except Exception:
+                msg = f"数据下载失败，触发异常：\n{traceback.format_exc()}"
+                self.write_log(msg)
+        self.write_log(f"--下载历史数据任务结束--")
         # Clear thread object handler.
         self.thread = None
 

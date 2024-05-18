@@ -1,7 +1,7 @@
 from datetime import datetime
 from time import sleep
 from typing import TYPE_CHECKING
-from vnpy.app.algo_trading import AlgoTradingApp
+
 from vnpy.trader.engine import MainEngine
 from vnpy.trader.constant import OrderType
 from vnpy.trader.object import ContractData, OrderRequest, SubscribeRequest, TickData

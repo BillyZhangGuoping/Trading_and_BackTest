@@ -1,1 +1,0 @@
-from .supplyment import ConfigManager
