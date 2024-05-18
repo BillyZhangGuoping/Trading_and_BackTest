@@ -56,3 +56,4 @@ class ConfigManager:
         logger.addHandler(file_handler)
         logger.addHandler(stream_handler)
         return logger
+

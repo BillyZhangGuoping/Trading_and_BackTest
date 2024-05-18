@@ -7,7 +7,7 @@ from typing import List
 
 import jqdatasdk as jq
 from vnpy.trader.constant import Exchange, Interval
-# from vnpy.trader.database import database_manager
+from vnpy.trader.mddata import mddata_client
 from vnpy.trader.object import (
 	BarData
 )
@@ -23,67 +23,20 @@ class JQDataService:
 		config = open('./JQDataConfig.json')
 		self.setting = json.load(config)
 
-		USERNAME = self.setting['jqdata.Username']
-		PASSWORD = self.setting['jqdata.Password']
 
 
 		self.max_min_days = 0
 		self.symbol_data_dict = {}
 
-		try:
-			jq.auth(USERNAME, PASSWORD)
-		except Exception as ex:
-			print("jq auth fail:" + repr(ex))
+		mddata_client.init()
 
-	def to_jq_symbol(self, symbol: str, exchange: Exchange):
-		"""
-		CZCE product of RQData has symbol like "TA1905" while
-		vt symbol is "TA905.CZCE" so need to add "1" in symbol.
-		"""
-		if exchange in [Exchange.SSE, Exchange.SZSE]:
-			if exchange == Exchange.SSE:
-				jq_symbol = f"{symbol}.XSHG"  # 上海证券交易所
-			else:
-				jq_symbol = f"{symbol}.XSHE"  # 深圳证券交易所
-		elif exchange == Exchange.SHFE:
-			jq_symbol = f"{symbol}.XSGE"  # 上期所
-		elif exchange == Exchange.CFFEX:
-			jq_symbol = f"{symbol}.CCFX"  # 中金所
-		elif exchange == Exchange.DCE:
-			jq_symbol = f"{symbol}.XDCE"  # 大商所
-		elif exchange == Exchange.INE:
-			jq_symbol = f"{symbol}.XINE"  # 上海国际能源期货交易所
-		elif exchange == Exchange.CZCE:
-			# 郑商所 的合约代码年份只有三位 需要特殊处理
-			for count, word in enumerate(symbol):
-				if word.isdigit():
-					break
-
-			# Check for index symbol
-			time_str = symbol[count:]
-			if time_str in ["88", "888", "99", "8888"]:
-				return f"{symbol}.XZCE"
-
-			# noinspection PyUnboundLocalVariable
-			product = symbol[:count]
-			year = symbol[count]
-			month = symbol[count + 1:]
-
-			if year == "9":
-				year = "1" + year
-			else:
-				year = "2" + year
-
-			jq_symbol = f"{product}{year}{month}.XZCE"
-
-		return jq_symbol.upper()
 
 	def query_history(self, symbol, exchange, start, end, interval='1m',save_base = True):
 		"""
 		Query history bar data from JQData and update Database.
 		"""
 
-		jq_symbol = self.to_jq_symbol(symbol, exchange)
+		jq_symbol = mddata_client.to_jq_symbol(symbol, exchange)
 		# if jq_symbol not in self.symbols:
 		#     return None
 
@@ -250,7 +203,7 @@ class JQDataService:
 		dt0 = time.process_time()
 		symbol = vt_symbol.split(".")[0]
 		exchange = Exchange(vt_symbol.split(".")[1])
-		jq_symbol = self.to_jq_symbol(symbol, exchange)
+		jq_symbol = mddata_client.to_jq_symbol(symbol, exchange)
 		df = jq.get_ticks(jq_symbol, startDt, endDt, fields = None, skip=True,df=True)
 		cost = (time.process_time() - dt0)
 		print(u'合约%s的下载完成%s - %s，耗时%s秒, 条数 %s' % (symbol, startDt, endDt, cost, len(df)))

@@ -29,6 +29,7 @@ class JqdataClient(MdDataApi):
         """"""
         self.username = SETTINGS["jqdata.username"]
         self.password = SETTINGS["jqdata.password"]
+        self.jq = jq
 
         self.inited = False
 
@@ -53,7 +54,39 @@ class JqdataClient(MdDataApi):
         self.inited = True
         return True
 
-    def to_jq_symbol(self, symbol: str, exchange: Exchange):
+    @staticmethod
+    def to_vn_symbol(symbol_exchange):
+        """
+        CZCE product of RQData has symbol like "TA1905" while
+        vt symbol is "TA905.CZCE" so need to add "1" in symbol.
+        """
+        symbol, exchange = symbol_exchange.split(".")
+        if exchange in ["XSHG", "XSHE"]:
+            if exchange == "XSHG":
+                vt_symbol = f"{symbol}.SSE"  # 上海证券交易所
+            else:
+                vt_symbol = f"{symbol}.SZSE"  # 深圳证券交易所
+        elif exchange == "XSGE":
+            vt_symbol = f"{symbol.lower()}.SHFE"  # 上期所
+        elif exchange == "CCFX":
+            vt_symbol = f"{symbol}.CFFEX"  # 中金所
+        elif exchange == "XDCE":
+            vt_symbol = f"{symbol.lower()}.DCE"  # 大商所
+        elif exchange == "XINE":
+            vt_symbol = f"{symbol.lower()}.INE"  # 上海国际能源期货交易所
+        elif exchange == "XZCE":
+            # 郑商所 的合约代码年份只有三位 需要特殊处理
+
+            # noinspection PyUnboundLocalVariable
+            count = 2
+            product = symbol[:count]
+            month = symbol[count + 1:]
+            vt_symbol = f"{product}{month}.CZCE"
+
+        return vt_symbol
+
+    @staticmethod
+    def to_jq_symbol(symbol: str, exchange: Exchange):
         """
         CZCE product of RQData has symbol like "TA1905" while
         vt symbol is "TA905.CZCE" so need to add "1" in symbol.
@@ -107,7 +140,6 @@ class JqdataClient(MdDataApi):
             return f"{symbol} 是当前主力合约"
         else:
             return f"{symbol} 不是当前主力合约，主力合约是{dominant_future}"
-
 
 
     def query_history(self, req: HistoryRequest):
