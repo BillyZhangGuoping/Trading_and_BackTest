@@ -1,7 +1,9 @@
-import json
-import os
+
 import logging
+import os
+import json
 from vnpy.trader.utility import get_folder_path
+
 
 class ConfigManager:
     """

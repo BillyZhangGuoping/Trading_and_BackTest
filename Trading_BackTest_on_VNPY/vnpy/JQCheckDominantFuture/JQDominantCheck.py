@@ -3,7 +3,6 @@ import os
 from datetime import datetime, timedelta
 
 import jqdatasdk as jq
-
 from vnpy.addon.supplyment import ConfigManager
 from vnpy.trader.mddata import mddata_client
 
