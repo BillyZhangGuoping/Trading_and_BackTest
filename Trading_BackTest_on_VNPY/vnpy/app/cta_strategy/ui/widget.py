@@ -14,6 +14,7 @@ from vnpy.event import Event, EventEngine
 from vnpy.trader.constant import (
     Direction
 )
+
 from vnpy.trader.database import database_manager
 from vnpy.trader.engine import MainEngine
 from vnpy.trader.slip_summary.SlipSummary import SlipSummary
@@ -27,7 +28,8 @@ from vnpy.trader.ui.widget import (
     PercentCell,
     DatetimeCell,
     DirectionCell,
-    BaseMonitor
+    BaseMonitor,
+    roundTwoDecimal
 )
 
 from .rollover import RolloverTool
@@ -268,9 +270,9 @@ class CtaManager(QtWidgets.QWidget):
         """
         data = event.data
 
-        if data.date < datetime.now(get_localzone()) <= (data.date + timedelta(days=2, hours=8)):
+        if data.date < datetime.now(get_localzone()) <= (data.date + timedelta(days=1, hours=8)):
             # self.managers[data.strategy].cells["pos"].setBackground(QtGui.QBrush(QtGui.QColor("blue")))
-            self.managers[data.strategy].setStyleSheet("QTableWidget{border:6px solid aqua}")
+            self.managers[data.strategy].setStyleSheet("QTableWidget{border:3px solid aqua}")
         # if self.currentStrategyName == data.strategy:
         # data.date = data.date[-4:]
         self.event_engine.put(Event(EVENT_CTA_DISPLAY_TRADE, data))
@@ -324,9 +326,8 @@ class CtaManager(QtWidgets.QWidget):
 
         if not path:
             return
-
         deal_summary = self.main_engine.get_engine("csvExport")
-        deal_summary.batchExport(days = 1000,path = path)
+        deal_summary.batchExport(days = 1000,path=path)
 
     def account_summary(self):
         accountdata_DF = self.cta_engine.get_dbaccount_data()
@@ -485,13 +486,13 @@ class StrategyManager(QtWidgets.QFrame):
         # author = self._data["author"]
 
         label_text = (
-            f"({class_name}){strategy_name}-{vt_symbol}"
+            f"{strategy_name}-{vt_symbol}({class_name})"
         )
         self.label = QtWidgets.QLabel(label_text)
         self.label.setAlignment(QtCore.Qt.AlignLeft)
 
-        self.parameters_monitor = DataMonitor(self._data["parameters"])
-        self.variables_monitor = DataMonitor(self._data["variables"])
+        self.parameters_monitor = DataMonitor(self._data["parameters"],270)
+        self.variables_monitor = DataMonitor(self._data["variables"],110)
 
         hbox = QtWidgets.QHBoxLayout()
         hbox.addWidget(self.init_button)
@@ -501,7 +502,6 @@ class StrategyManager(QtWidgets.QFrame):
         hbox.addWidget(self.remove_button)
         hbox.addWidget(self.clear_button)
         hbox.addWidget(self.anaylze_button)
-
 
         vbox = QtWidgets.QVBoxLayout()
         vbox.addWidget(self.label)
@@ -519,7 +519,7 @@ class StrategyManager(QtWidgets.QFrame):
         # author = self._data["author"]
 
         self.label.setText(
-            f"({class_name}) {strategy_name}-{vt_symbol}"
+            f"{strategy_name}-{vt_symbol}({class_name})"
         )
 
         self.parameters_monitor.update_data(data["parameters"])
@@ -537,7 +537,6 @@ class StrategyManager(QtWidgets.QFrame):
             return
         self.init_button.setEnabled(False)
         self.anaylze_button.setEnabled(True)
-
 
         if trading:
             self.start_button.setEnabled(False)
@@ -849,7 +848,6 @@ class TriggeredMonitor(BaseMonitor):
         "drawdown": {"display": "回撤", "cell": BaseCell, "update": False}
     }
 
-
     def set_df(self,objectDF):
         if not isinstance(objectDF,list):
             objectDF = objectDF.to_dict(orient='records')
@@ -1099,9 +1097,10 @@ class DataMonitor(QtWidgets.QTableWidget):
     Table monitor for parameters and variables.
     """
 
-    def __init__(self, data: dict):
+    def __init__(self, data: dict, high = 180):
         """"""
         super(DataMonitor, self).__init__()
+        self.hight = high
 
         if "inited" in data:
             data = data.copy()
@@ -1121,7 +1120,7 @@ class DataMonitor(QtWidgets.QTableWidget):
         # self.setHorizontalHeaderLabels(labels)
         self.setVerticalHeaderLabels(labels)
         # self.setMaximumWidth(100)
-        self.setFixedHeight(180)
+        self.setFixedHeight(self.hight)
 
         self.setColumnCount(1)
         self.horizontalHeader().setSectionResizeMode(
@@ -1145,10 +1144,6 @@ class DataMonitor(QtWidgets.QTableWidget):
         if "pos" in self._data:
             self.hideRow(0)
             self.hideRow(2)
-        #     self.setFixedHeight(32 * (len(self._data) - 2))
-        # else:
-        #     self.setFixedHeight(32 * (len(self._data)))
-
 
     def update_data(self, data: dict):
         """"""
@@ -1163,15 +1158,7 @@ class DataMonitor(QtWidgets.QTableWidget):
             cell = self.cells[name]
             cell.setText(roundTwoDecimal(value))
         self._data = data
-        # if "pos" in self._data:
-        #     self.setFixedHeight(32 * (len(self._data) - 2))
-        # else:
-        #     self.setFixedHeight(32 * (len(self._data)))
 
-def roundTwoDecimal(inputvalue):
-    if isinstance(inputvalue, float):
-        inputvalue = round(inputvalue, 3)
-    return str(inputvalue)
 
 
 class NewSampleDataMonitor(QtWidgets.QTableWidget):
@@ -1188,7 +1175,7 @@ class NewSampleDataMonitor(QtWidgets.QTableWidget):
         self._Strategy = data["strategy_name"]
         self.subkey = ['inited', 'trading', 'pos', 'PosPrice']
         self.end = datetime.now()
-        self.start = self.end.replace(hour=0, minute=0) - timedelta(days=2)
+        self.start = self.end.replace(hour=0, minute=0) - timedelta(days=60)
         self.cta_manager = cta_manager
         self.cta_engine = cta_engine
         self.inited = False
@@ -1279,7 +1266,7 @@ class NewSampleDataMonitor(QtWidgets.QTableWidget):
             self.cta_manager.event_engine.put(Event(EVENT_CTA_TRADE, trade))
 
         dbstop_orders = database_manager.load_triggered_stop_order_data(self._Strategy, self.start, self.end)
-        for dbstop_order in dbstop_orders:
+        for dbstop_order in dbstop_orders[:10]:
             self.cta_manager.event_engine.put(Event(EVENT_CTA_TRIGGERED_STOPORDER, dbstop_order))
 
     def StrategyManagerChoose(self):

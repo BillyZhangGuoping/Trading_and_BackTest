@@ -9,7 +9,7 @@ from typing import Any, Dict
 from copy import copy
 from tzlocal import get_localzone
 from ..converter import OffsetConverter,PositionHolding
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtGui, QtWidgets, Qt
 import rqdatac
 import numpy as np
 
@@ -36,6 +36,10 @@ COLOR_BID = QtGui.QColor(255, 174, 201)
 COLOR_ASK = QtGui.QColor(160, 255, 160)
 COLOR_BLACK = QtGui.QColor("white")
 
+def roundTwoDecimal(inputvalue):
+    if isinstance(inputvalue, float):
+        inputvalue = round(inputvalue, 3)
+    return str(inputvalue)
 
 class BaseCell(QtWidgets.QTableWidgetItem):
     """
@@ -52,7 +56,7 @@ class BaseCell(QtWidgets.QTableWidgetItem):
         """
         Set text content.
         """
-        self.setText(str(content))
+        self.setText(str(roundTwoDecimal(content)))
         self._data = data
 
     def get_data(self) -> Any:
@@ -98,7 +102,6 @@ class DirectionCell(EnumCell):
             self.setForeground(COLOR_SHORT)
         else:
             self.setForeground(COLOR_LONG)
-
 
 
 class BidCell(BaseCell):
@@ -160,7 +163,6 @@ class PnlCell(BaseCell):
             self.setForeground(COLOR_LONG)
 
 
-
 class TimeCell(BaseCell):
     """
     Cell used for showing time string from datetime object.
@@ -204,7 +206,7 @@ class DatetimeCell(BaseCell):
             return
 
         content = content.astimezone(self.local_tz)
-        timestamp = content.strftime("%y%m%d %H:%M:%S")
+        timestamp = content.strftime("%m%d %H:%M:%S")
 
         # millisecond = int(content.microsecond / 1000)
         # if millisecond:
@@ -483,18 +485,18 @@ class OrderMonitor(BaseMonitor):
     sorting = True
 
     headers: Dict[str, dict] = {
-        "orderid": {"display": "委托号", "cell": BaseCell, "update": False},
-        "reference": {"display": "来源", "cell": BaseCell, "update": False},
-        "symbol": {"display": "代码", "cell": BaseCell, "update": False},
-        "exchange": {"display": "交易所", "cell": EnumCell, "update": False},
-        "type": {"display": "类型", "cell": EnumCell, "update": False},
-        "direction": {"display": "方向", "cell": DirectionCell, "update": False},
         "offset": {"display": "开平", "cell": EnumCell, "update": False},
         "price": {"display": "价格", "cell": BaseCell, "update": False},
+        "symbol": {"display": "代码", "cell": BaseCell, "update": False},
+        "exchange": {"display": "交易所", "cell": EnumCell, "update": False},
+        "direction": {"display": "方向", "cell": DirectionCell, "update": False},
         "volume": {"display": "总数量", "cell": BaseCell, "update": True},
         "traded": {"display": "已成交", "cell": BaseCell, "update": True},
         "status": {"display": "状态", "cell": EnumCell, "update": True},
         "datetime": {"display": "时间", "cell": TimeCell, "update": True},
+        "type": {"display": "类型", "cell": EnumCell, "update": False},
+        "orderid": {"display": "委托号", "cell": BaseCell, "update": False},
+        "reference": {"display": "来源", "cell": BaseCell, "update": False},
         "gateway_name": {"display": "接口", "cell": BaseCell, "update": False},
     }
 
@@ -530,6 +532,8 @@ class PositionMonitor(BaseMonitor):
 
     headers = {
         "symbol": {"display": "代码", "cell": BaseCell, "update": False},
+        "cost": {"display": "对应市值", "cell": BaseCell, "update": True},
+        "pnl": {"display": "盈亏", "cell": PnlCell, "update": True},
         "exchange": {"display": "交易所", "cell": EnumCell, "update": False},
         "direction": {"display": "方向", "cell": DirectionCell, "update": False},
         "volume": {"display": "数量", "cell": BaseCell, "update": True},
@@ -538,8 +542,6 @@ class PositionMonitor(BaseMonitor):
         "price": {"display": "均价", "cell": BaseCell, "update": True},
         "useMargin": {"display": "保证金", "cell": BaseCell, "update": True},
         "useMarginRate": {"display": "保证金比", "cell": BaseCell, "update": True},
-        "cost": {"display": "对应市值", "cell": BaseCell, "update": True},
-        "pnl": {"display": "盈亏", "cell": PnlCell, "update": True},
         "gateway_name": {"display": "接口", "cell": BaseCell, "update": False},
     }
 

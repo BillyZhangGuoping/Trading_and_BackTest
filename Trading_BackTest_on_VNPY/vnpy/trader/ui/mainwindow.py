@@ -11,7 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 
 import vnpy
 from vnpy.event import EventEngine
-from .widget import (
+from vnpy.trader.ui.widget import (
     TickMonitor,
     OrderMonitor,
     TradeMonitor,
