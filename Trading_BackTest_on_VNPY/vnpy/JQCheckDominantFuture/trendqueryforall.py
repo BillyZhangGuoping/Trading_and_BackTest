@@ -19,12 +19,13 @@ class TrendFutureAnalyzer:
         self.login_jq()
         tofile = []
         for symbol in self.symbol_list:
-            df = self.calculate_emas(future_code = symbol,periods =[2,5,10,20,30,60])
+            df = self.calculate_emas(future_code = symbol,periods =[3,5,10,20,30,60])
             tofile.append(self.check_trend(df))
 
         # 获取当天日期并生成文件名
         today = datetime.today().strftime("%Y%m%d")
-        file_name = f"{today}.html"
+        fold_path = get_folder_path("trendquery")
+        file_name = fold_path.joinpath(f"{today}.html")
 
         html_content = "<html><body>"
 
@@ -38,8 +39,8 @@ class TrendFutureAnalyzer:
                     html_content += f"<p>{string}</p>"
 
         html_content += "</body></html>"
-        fold_path = get_folder_path("trendquery")
-        with open(fold_path.joinpath(file_name), 'w', encoding='UTF-8') as f:  # 指定编码写入文件
+
+        with open(file_name, 'w', encoding='UTF-8') as f:  # 指定编码写入文件
             f.write(html_content)
 
         # 自动打开网页
@@ -59,12 +60,15 @@ class TrendFutureAnalyzer:
         ema = talib.EMA(close_prices, timeperiod=timeperiod)
         return ema
 
-    def calculate_emas(self, future_code,periods):
+    def calculate_emas(self, future_code, periods):
         symbol, exchange = future_code.split('.')
-        self.future_code = mddata_client.to_jq_symbol(symbol,Exchange(exchange))
+        self.future_code = mddata_client.to_jq_symbol(symbol, Exchange(exchange))
         close_prices = self.get_close_prices()
         ema_results = [self.calculate_ema(close_prices, period) for period in periods]
         df = pd.DataFrame({period: result for period, result in zip(periods, ema_results)})
+
+        # 在最左边添加一列
+        df.insert(0, '1', close_prices)
 
         comparison_column = []
         for index in range(len(df)):  # 从第一行开始
@@ -119,5 +123,6 @@ class TrendFutureAnalyzer:
                 output = output + f"在{count}个交易日之前，均线下"
         return output
 
-futuretrend =TrendFutureAnalyzer()
-futuretrend.review_symbol_list()
+if __name__ == "__main__":
+    futuretrend =TrendFutureAnalyzer()
+    futuretrend.review_symbol_list()
