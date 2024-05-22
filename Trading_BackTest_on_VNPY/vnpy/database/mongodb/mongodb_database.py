@@ -713,6 +713,7 @@ class MongodbDatabase(BaseDatabase):
             db_stop_order.direction = Direction(db_stop_order.direction)
             db_stop_order.offset = Offset(db_stop_order.offset)
             db_stop_order.status = StopOrderStatus(db_stop_order.status)
+            db_stop_order.volume= abs(db_stop_order.volume)
             db_stop_order.first_price = round(db_stop_order.first_price,2)
             db_stop_order.average_price = round(db_stop_order.average_price, 2)
             stop_orders.append(db_stop_order)

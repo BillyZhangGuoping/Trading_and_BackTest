@@ -1,20 +1,13 @@
-import copy
 import csv
 from datetime import datetime, timedelta
 from typing import Any
 
 from PyQt5 import QtGui
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-from pandas import DataFrame
 from tzlocal import get_localzone
-from vnpy.app.cta_backtester.ui.widget import BacktesterChart
-from vnpy.app.cta_strategy.backtesting import BacktestingEngine
 from vnpy.event import Event, EventEngine
-from vnpy.trader.constant import (
-    Direction
-)
-
 from vnpy.trader.database import database_manager
 from vnpy.trader.engine import MainEngine
 from vnpy.trader.slip_summary.SlipSummary import SlipSummary
@@ -43,6 +36,7 @@ from ..base import (
     EVENT_CTA_TRIGGERED_STOPORDER
 )
 from ..engine import CtaEngine
+from vnpy.app.cta_backtester.ui.widget import BacktesterChart
 
 
 class CtaManager(QtWidgets.QWidget):
@@ -455,6 +449,10 @@ class StrategyManager(QtWidgets.QFrame):
 
     def init_ui(self):
         """"""
+        # self.setFixedHeight(280)
+        # self.setMaximumWidth(280)
+        # self.setFrameShape(self.Box)
+        # self.setLineWidth(0)
 
         self.init_button = QtWidgets.QPushButton("初始化")
         self.init_button.clicked.connect(self.init_strategy)
@@ -648,10 +646,9 @@ class StrategyManager(QtWidgets.QFrame):
         return data
 
     def analyze_strategy(self):
-        """
-        # use triggerrd_order to calculate the strategy
+        """"""
         objectDF = self.cta_engine.get_strategy_triggered_order(self.strategy_name)
-        self.cta_engine.transprot_all_triggered_strategies_order()
+        # self.cta_engine.transprot_all_triggered_strategies_order()
 
         if not objectDF.empty:
             triggerd_statistics_monitor = Triggered_OrderStatisticsMonitor()
@@ -681,128 +678,6 @@ class StrategyManager(QtWidgets.QFrame):
             gbox.addWidget(chart,0,1,2,1)
             analyz_dialog.setLayout(gbox)
             analyz_dialog.exec_()
-        """
-        # use trader date in batabase to calcaute strategy
-        trade_result = database_manager.load_cta_trade_data(strategy= self.strategy_name,start = datetime(2001,10,10), end = datetime(2100,10,10))
-        if trade_result:
-            backtester = BacktestingEngine()
-            backtester.capital = self._data["parameters"]["HeYueJiaZhi"]
-            backtester.size = self._data["parameters"]["HeYueChengShu"]
-
-            tradeResultDict = copy.copy(backtester.calculateBacktestingResult(db_traders=trade_result))
-            resultlist = copy.copy(tradeResultDict['resultList'])
-            del backtester
-
-            #define static_monitor
-            statistics = {
-                "损益": tradeResultDict['capital'],
-                "最高收益": tradeResultDict['maxCapital'],
-                "回撤": tradeResultDict['drawdown'],
-                "最大回撤": tradeResultDict['maxDrawdown'],
-                "总盈利": tradeResultDict['totalWinning'],
-                "总亏损": tradeResultDict['totalLosing'],
-                "总交易次数": tradeResultDict['totalResult'],
-                "交易胜率": f"{tradeResultDict['winningRate']:,.2f}%",
-                "盈利交易次数": tradeResultDict['winningResult'],
-                "亏损交易次数": tradeResultDict['losingResult'],
-                "平均每次交易": tradeResultDict['averageProfit'],
-                "平均每次盈利": tradeResultDict['averageWinning'],
-                "平均每次亏损": tradeResultDict['averageLosing'],
-                "平均每次盈利/-平均每次亏损": tradeResultDict['profitLossRatio'],
-                "最多连续赢几次": tradeResultDict['max_win_count'],
-                "最多连续输几次": tradeResultDict['max_lose_count'],
-                "总盈利/总亏损": -tradeResultDict['totalWinning'] / max(1, tradeResultDict['totalLosing']),
-                "收益STD": tradeResultDict['returnStd'],
-
-            }
-            static_monitor = Trade_StatisticsMonitor()
-            static_monitor.set_data(statistics)
-
-            objectDF = self.converst_strategy_triggered_order(resultlist)
-
-            #define triggerd_view
-            triggerd_view = TriggeredMonitor(self.cta_manager.main_engine, self.cta_manager.main_engine.event_engine)
-            triggerd_view.set_df(objectDF)
-            triggerd_view.setMinimumHeight(400)
-
-            #define chart
-            objectDF["net_pnl"] = objectDF["revenue"]
-            objectDF= objectDF.set_index("close_date")
-            chart = BacktesterChart()
-            chart.set_data(objectDF)
-
-            analyz_dialog = QDialog()
-            analyz_dialog.setWindowTitle(self.strategy_name)
-            analyz_dialog.setWindowModality(Qt.NonModal)
-            analyz_dialog.setWindowFlags(Qt.Dialog | Qt.WindowMinMaxButtonsHint | Qt.WindowCloseButtonHint)
-            gbox = QtWidgets.QGridLayout()
-            analyz_dialog.resize(1200, 800)
-
-            gbox.addWidget(static_monitor,0,0)
-            gbox.addWidget(triggerd_view,1,0)
-            gbox.addWidget(chart,0,1,2,1)
-            analyz_dialog.setLayout(gbox)
-            analyz_dialog.exec_()
-
-            # trade_list = []
-            # for trade in trade_result:
-            #     trade_list.append(dict(trade))
-            #
-            # del trade_result
-            #
-            # trade_monitor = StrategyTradeMonitor(self.cta_manager.main_engine, self.cta_manager.main_engine.event_engine,event_type_required=False)
-            # trade_monitor.set_df(trade_list)
-            #
-            # static_monitor.trade_table = trade_monitor
-            #
-            #
-            # analyz_dialog = QDialog()
-            # analyz_dialog.setWindowTitle("策略")
-            # analyz_dialog.setWindowModality(Qt.NonModal)
-            # analyz_dialog.setWindowFlags(Qt.Dialog | Qt.WindowMinMaxButtonsHint | Qt.WindowCloseButtonHint)
-            # gbox = QtWidgets.QGridLayout()
-            # analyz_dialog.resize(1200, 800)
-            #
-            #
-            # gbox.addWidget(static_monitor,0,0)
-            # gbox.addWidget(trade_monitor,1,0)
-            # # gbox.addWidget(chart,0,1,2,1)
-            # analyz_dialog.setLayout(gbox)
-            # analyz_dialog.exec_()
-
-    def converst_strategy_triggered_order(self, result):
-        # result = database_manager.load_close_triggered_stop_order_data(strategy_name)
-
-        objectDF = DataFrame(data=None,
-                             columns=["open_date", "close_date", "direction", "open_price", "volume", "close_price",
-                                      "revenue"], dtype=object)
-        if result:
-            for close_data in result:
-                close_data.direction = Direction.LONG if close_data.volume > 0 else Direction.SHORT
-                objectDF.loc[len(objectDF) + 1] = [close_data.entryDt, close_data.exitDt, close_data.direction,
-                                                   close_data.entryPrice, close_data.volume, close_data.exitPrice,
-                                                   close_data.pnl]
-
-            objectDF["UnitReturn"] = objectDF["revenue"] * 100 / objectDF['open_price']
-
-            objectDF["balance"] = objectDF["revenue"].cumsum()
-
-            objectDF["returnRatio"] = objectDF["revenue"]
-
-            objectDF.loc[0, "balance"] = 0
-
-            objectDF["highlevel"] = (
-                objectDF["balance"].rolling(
-                    min_periods=1, window=len(objectDF), center=False).max()
-            )
-
-            objectDF.drop(index=0, inplace=True)
-
-            objectDF["drawdown"] = objectDF["balance"] - objectDF["highlevel"]
-            objectDF["ddpercent"] = objectDF["drawdown"] / objectDF["highlevel"] * 100
-
-        return objectDF
-
 
 
 
@@ -849,9 +724,8 @@ class TriggeredMonitor(BaseMonitor):
     }
 
     def set_df(self,objectDF):
-        if not isinstance(objectDF,list):
-            objectDF = objectDF.to_dict(orient='records')
-        for record_item in objectDF:
+        objectDF_list = objectDF.to_dict(orient='records')
+        for record_item in objectDF_list:
             self.insert_data(record_item)
 
     def insert_data(self, data):
@@ -881,13 +755,11 @@ class AccountDataMonitor(TriggeredMonitor):
         "total_pnl": {"display": "累计变动", "cell": PnlCell, "update": False},
         "total_pnl_percent": {"display": "累计变动比率", "cell": PercentCell, "update": False},
         "drawdown": {"display": "最高点回撤", "cell": PnlCell, "update": False},
-        "BankTransfer": {"display": "出入金", "cell": BaseCell, "update": False},
         "CurrMargin": {"display": "保证金", "cell": BaseCell, "update": False},
         "CurrMarginPrecent": {"display": "保证金占比", "cell": PercentCell, "update": False},
         "available": {"display": "可用余额", "cell": BaseCell, "update": False}
 
     }
-
 
 class Triggered_OrderStatisticsMonitor(QtWidgets.QTableWidget):
     """"""
@@ -896,6 +768,7 @@ class Triggered_OrderStatisticsMonitor(QtWidgets.QTableWidget):
         "end_balance": "历史结算资金",
         "total_net_pnl": "总盈亏",
         "total_return": "总收益率",
+
 
         "total_trade_count": "总成交笔数",
         "winningResult": "盈利次数",
@@ -909,7 +782,7 @@ class Triggered_OrderStatisticsMonitor(QtWidgets.QTableWidget):
         "perprofitLoss": "平均单笔损益",
         "averageWinning": "盈利平均每笔",
         "averageLosing" : "亏损平均每笔",
-        "profitLossRatio" : "盈亏比"
+        "profitLossRatio" : "盈亏比",
 
     }
 
@@ -918,8 +791,6 @@ class Triggered_OrderStatisticsMonitor(QtWidgets.QTableWidget):
         super().__init__()
 
         self.cells = {}
-
-        self.trade_table = None
 
         self.init_ui()
 
@@ -940,8 +811,6 @@ class Triggered_OrderStatisticsMonitor(QtWidgets.QTableWidget):
             self.setItem(row, 0, cell)
             self.cells[key] = cell
 
-        self.init_menu()
-
     def clear_data(self):
         """"""
         for cell in self.cells.values():
@@ -954,143 +823,30 @@ class Triggered_OrderStatisticsMonitor(QtWidgets.QTableWidget):
         """
         data["capital"] = f"{data['capital']:,.2f}"
         data["end_balance"] = f"{data['end_balance']:,.2f}"
+        data["total_net_pnl"] = f"{data['total_net_pnl']:,.2f}"
         data["total_return"] = f"{data['total_return']:,.2f}%"
-        data["annual_return"] = f"{data['annual_return']:,.2f}%"
+
+        data["total_trade_count"] = f"{data['total_trade_count']}"
+        data["winningResult"] = f"{data['winningResult']}"
+        data["losingResult"] = f"{data['losingResult']}"
+        data["winningRate"] = f"{data['winningRate']:,.2f}%"
+
         data["max_drawdown"] = f"{data['max_drawdown']:,.2f}"
         data["max_ddpercent"] = f"{data['max_ddpercent']:,.2f}%"
-        data["total_net_pnl"] = f"{data['total_net_pnl']:,.2f}"
-        data["total_commission"] = f"{data['total_commission']:,.2f}"
-        data["total_slippage"] = f"{data['total_slippage']:,.2f}"
-        data["total_turnover"] = f"{data['total_turnover']:,.2f}"
-        data["daily_net_pnl"] = f"{data['daily_net_pnl']:,.2f}"
-        data["daily_commission"] = f"{data['daily_commission']:,.2f}"
-        data["daily_slippage"] = f"{data['daily_slippage']:,.2f}"
-        data["daily_turnover"] = f"{data['daily_turnover']:,.2f}"
-        data["daily_trade_count"] = f"{data['daily_trade_count']:,.2f}"
-        data["daily_return"] = f"{data['daily_return']:,.2f}%"
-        data["return_std"] = f"{data['return_std']:,.2f}%"
-        data["sharpe_ratio"] = f"{data['sharpe_ratio']:,.2f}"
-        data["return_drawdown_ratio"] = f"{data['return_drawdown_ratio']:,.2f}"
+
+        data["totalWinning"] = f"{data['totalWinning']:,.2f}"
+        data["totalLosing"] = f"{data['totalLosing']:,.2f}"
+        data["averageWinning"] = f"{data['averageWinning']:,.2f}"
+        data["averageLosing"] = f"{data['averageLosing']:,.2f}"
+        data["perprofitLoss"] = f"{data['perprofitLoss']:,.2f}"
+        data["profitLossRatio"] = f"{data['profitLossRatio']:,.2f}"
 
 
         for key, cell in self.cells.items():
             value = data.get(key, "")
             cell.setText(str(value))
 
-    def init_menu(self) -> None:
-        """
-        Create right click menu.
-        """
-        self.menu = QtWidgets.QMenu(self)
 
-        save_action = QtWidgets.QAction("保存数据", self)
-        save_action.triggered.connect(self.save_csv)
-        self.menu.addAction(save_action)
-
-    def contextMenuEvent(self, event: QtGui.QContextMenuEvent) -> None:
-        """
-        Show menu with right click.
-        """
-        self.menu.popup(QtGui.QCursor.pos())
-
-    def save_csv(self) -> None:
-        """
-        Save table data into a csv file
-        """
-        path, _ = QtWidgets.QFileDialog.getSaveFileName(
-            self, "保存数据", "", "CSV(*.csv)")
-
-        if not path:
-            return
-
-        with open(path, "w", encoding='utf-8-sig') as f:
-            writer = csv.writer(f, lineterminator="\n")
-
-            headers = list(self.KEY_NAME_MAP.values())
-
-            for row in range(self.rowCount()):
-                if self.isRowHidden(row):
-                    continue
-
-                row_data = []
-                row_data.append(headers[row])
-                for column in range(self.columnCount()):
-                    item = self.item(row, column)
-                    if item:
-                        row_data.append(str(item.text()))
-                    else:
-                        row_data.append("")
-                writer.writerow(row_data)
-
-            writer.writerow([""])
-
-            if self.trade_table:
-                headers = [d["display"] for d in self.trade_table.headers.values()]
-                writer.writerow(headers)
-
-                for row in range(self.trade_table.rowCount()):
-                    if self.trade_table.isRowHidden(row):
-                        continue
-
-                    row_data = []
-                    for column in range(self.trade_table.columnCount()):
-                        item = self.trade_table.item(row, column)
-                        if item:
-                            row_data.append(str(item.text()))
-                        else:
-                            row_data.append("")
-                    writer.writerow(row_data)
-
-
-class Trade_StatisticsMonitor(Triggered_OrderStatisticsMonitor):
-    KEY_NAME_MAP = {
-        "损益": "损益",
-        "最高收益": "最高收益",
-        "回撤": "回撤",
-        "最大回撤": "最大回撤",
-        "总盈利": "总盈利",
-        "总亏损": "总亏损",
-        "总交易次数": "总交易次数",
-        "交易胜率": "交易胜率",
-        "盈利交易次数": "盈利交易次数",
-        "亏损交易次数": "亏损交易次数",
-        "平均每次交易": "平均每次交易",
-        "平均每次盈利": "平均每次盈利",
-        "平均每次亏损": "平均每次亏损",
-        "平均每次盈利/-平均每次亏损": "平均每次盈利/-平均每次亏损",
-        "最多连续赢几次": "最多连续赢几次",
-        "最多连续输几次": "最多连续输几次",
-        "总盈利/总亏损": "总盈利/总亏损",
-        "收益STD": "收益STD"
-    }
-    def set_data(self, data: dict):
-        """
-        :param data:
-        :return:
-        """
-        data["损益"] = f"{data['损益']:,.2f}"
-        data["最高收益"] = f"{data['最高收益']}"
-        data["回撤"] = f"{data['回撤']}"
-        data["最大回撤"] = f"{data['最大回撤']}"
-        data["总盈利"] = f"{data['总盈利']:,.2f}"
-        data["总亏损"] = f"{data['总亏损']:,.2f}"
-        data["总交易次数"] = data['总交易次数']
-        data["交易胜率"] = data['交易胜率']
-        data["盈利交易次数"] = f"{data['盈利交易次数']}"
-        data["亏损交易次数"] = f"{data['亏损交易次数']}"
-        data["平均每次交易"] = f"{data['平均每次交易']:,.2f}"
-        data["平均每次盈利"] = f"{data['平均每次盈利']:,.2f}"
-        data["平均每次亏损"] = f"{data['平均每次亏损']:,.2f}"
-        data["平均每次盈利/-平均每次亏损"] = f"{data['平均每次盈利/-平均每次亏损']:,.2f}"
-        data["最多连续赢几次"] = f"{data['最多连续赢几次']:}"
-        data["最多连续输几次"] = f"{data['最多连续输几次']}"
-        data["总盈利/总亏损"] = f"{data['总盈利/总亏损']:,.2f}"
-        data["收益STD"] = f"{data['收益STD']:,.2f}"
-
-
-        for key, cell in self.cells.items():
-            value = data.get(key, "")
-            cell.setText(str(value))
 
 class DataMonitor(QtWidgets.QTableWidget):
     """
@@ -1161,7 +917,6 @@ class DataMonitor(QtWidgets.QTableWidget):
 
 
 
-
 class NewSampleDataMonitor(QtWidgets.QTableWidget):
     """
     Table monitor for parameters and variables.
@@ -1170,9 +925,8 @@ class NewSampleDataMonitor(QtWidgets.QTableWidget):
     def __init__(self, cta_manager: CtaManager, cta_engine: CtaEngine, data: dict):
         """"""
         super(NewSampleDataMonitor, self).__init__()
-        self._full_symbol = data["vt_symbol"]
-        self._Symbol = self._full_symbol.split(".")[0]
 
+        self._Symbol = (data["vt_symbol"]).split(".")[0]
         self._Strategy = data["strategy_name"]
         self.subkey = ['inited', 'trading', 'pos', 'PosPrice']
         self.end = datetime.now()
@@ -1226,8 +980,11 @@ class NewSampleDataMonitor(QtWidgets.QTableWidget):
             self.cells["pos"].setBackground(QtGui.QColor("red"))
             self.cells["PosPrice"].setBackground(QtGui.QColor("red"))
 
+
     def update_data(self, data: dict):
         """"""
+        self._Symbol = (data["vt_symbol"]).split(".")[0]
+        self._Strategy = data["strategy_name"]
         labels = list([self._Symbol, self._Strategy])
         self.setHorizontalHeaderLabels(labels)
 
@@ -1267,11 +1024,12 @@ class NewSampleDataMonitor(QtWidgets.QTableWidget):
             self.cta_manager.event_engine.put(Event(EVENT_CTA_TRADE, trade))
 
         dbstop_orders = database_manager.load_triggered_stop_order_data(self._Strategy, self.start, self.end)
+
         dbstop_orders = self.sort_list(dbstop_orders)
         for dbstop_order in dbstop_orders[:10]:
             self.cta_manager.event_engine.put(Event(EVENT_CTA_TRIGGERED_STOPORDER, dbstop_order))
 
-    def sort_list(self,db_tri_stop_order_data_list):
+    def sort_list(self, db_tri_stop_order_data_list):
         return sorted(db_tri_stop_order_data_list,
                       key=lambda x: (x.datetime, x.stop_orderid.split(".")[1] if x.datetime == x.datetime else 0),
                       reverse=True)
@@ -1279,15 +1037,11 @@ class NewSampleDataMonitor(QtWidgets.QTableWidget):
     def StrategyManagerChoose(self):
         """"""
         # update the LastPrice when click
-        # local_strategy = self.cta_engine.strategies[self._Strategy]
-        # if hasattr(local_strategy, "bg") and local_strategy.bg.last_tick:
-        #     local_strategy.LastPrice = local_strategy.bg.last_tick.last_price
-        #     local_strategy.put_event()
         local_strategy = self.cta_engine.strategies[self._Strategy]
-        tick = self.cta_engine.main_engine.get_tick(self._full_symbol)
-        if tick:
-            local_strategy.LastPrice = tick.last_price
+        if hasattr(local_strategy, "bg") and local_strategy.bg.last_tick:
+            local_strategy.LastPrice = local_strategy.bg.last_tick.last_price
             local_strategy.put_event()
+
         # if self.cta_manager.currentStrategyName == self._Strategy:
         #   return
         self.cta_manager.currentStrategyName = self._Strategy
@@ -1330,7 +1084,7 @@ class TriggeredStopOrderMonitor(BaseMonitor):
     """
 
     event_type = EVENT_CTA_TRIGGERED_STOPORDER
-    data_key = ""
+    data_key = "stop_orderid"
     sorting = True
 
     headers = {
@@ -1402,14 +1156,13 @@ class StrategyTradeMonitor(BaseMonitor):
         "price": {"display": "价格", "cell": BaseCell, "update": False},
         "volume": {"display": "数量", "cell": BaseCell, "update": False},
         "direction": {"display": "方向", "cell": DirectionCell, "update": False},
-        "offset": {"display": "开平", "cell": EnumCell, "update": False}
+        "offset": {"display": "开平", "cell": EnumCell, "update": False},
+        # "date": {"display": "日期", "cell": BaseCell, "update": False},
+        # "tradeid": {"display": "成交号 ", "cell": BaseCell, "update": False},
+        # "orderid": {"display": "委托号", "cell": BaseCell, "update": False},
+        # "exchange": {"display": "交易所", "cell": EnumCell, "update": False},
+        # "gateway_name": {"display": "接口", "cell": BaseCell, "update": False},
     }
-
-    def __init__(self, main_engine: MainEngine, event_engine: EventEngine,event_type_required = True):
-        """"""
-        if event_type_required == False:
-	        self.event_type = None
-        super(StrategyTradeMonitor, self).__init__(main_engine,event_engine)
 
     def init_ui(self):
         """
@@ -1422,27 +1175,6 @@ class StrategyTradeMonitor(BaseMonitor):
         self.hideColumn(3)
         self.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
 
-    def set_df(self, objectDF):
-        if not isinstance(objectDF, list):
-	        objectDF = objectDF.to_dict(orient='records')
-        for record_item in objectDF:
-	        self.insert_data(record_item)
-
-    def insert_data(self, data):
-        """
-		Insert a new row at the top of table.
-		"""
-        self.insertRow(0)
-
-        for column, header in enumerate(self.headers.keys()):
-	        setting = self.headers[header]
-	        content = data[header]
-	        cell = setting["cell"](content, data)
-	        self.setItem(0, column, cell)
-
-    def __del__(self) -> None:
-        """"""
-        pass
 
 class LogMonitor(BaseMonitor):
     """
@@ -1565,4 +1297,3 @@ class SettingEditor(QtWidgets.QDialog):
             setting[name] = value
 
         return setting
-
