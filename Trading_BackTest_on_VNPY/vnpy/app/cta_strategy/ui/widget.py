@@ -1268,7 +1268,7 @@ class NewSampleDataMonitor(QtWidgets.QTableWidget):
 
         dbstop_orders = database_manager.load_triggered_stop_order_data(self._Strategy, self.start, self.end)
         dbstop_orders = self.sort_list(dbstop_orders)
-        for dbstop_order in dbstop_orders[:10]:
+        for dbstop_order in dbstop_orders[-10:]:
             self.cta_manager.event_engine.put(Event(EVENT_CTA_TRIGGERED_STOPORDER, dbstop_order))
 
     def sort_list(self,db_tri_stop_order_data_list):
@@ -1330,7 +1330,7 @@ class TriggeredStopOrderMonitor(BaseMonitor):
     """
 
     event_type = EVENT_CTA_TRIGGERED_STOPORDER
-    data_key = ""
+    data_key = "stop_orderid"
     sorting = True
 
     headers = {

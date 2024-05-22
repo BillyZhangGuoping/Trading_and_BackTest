@@ -929,7 +929,7 @@ class NewSampleDataMonitor(QtWidgets.QTableWidget):
         self._Symbol = (data["vt_symbol"]).split(".")[0]
         self._Strategy = data["strategy_name"]
         self.subkey = ['inited', 'trading', 'pos', 'PosPrice']
-        self.end = datetime.now()
+        self.end = datetime.now() + timedelta(days=3)
         self.start = self.end.replace(hour=0, minute=0) - timedelta(days=100)
         self.cta_manager = cta_manager
         self.cta_engine = cta_engine
@@ -1026,13 +1026,13 @@ class NewSampleDataMonitor(QtWidgets.QTableWidget):
         dbstop_orders = database_manager.load_triggered_stop_order_data(self._Strategy, self.start, self.end)
 
         dbstop_orders = self.sort_list(dbstop_orders)
-        for dbstop_order in dbstop_orders[:10]:
+
+        for dbstop_order in dbstop_orders[-10:]:
             self.cta_manager.event_engine.put(Event(EVENT_CTA_TRIGGERED_STOPORDER, dbstop_order))
 
     def sort_list(self, db_tri_stop_order_data_list):
         return sorted(db_tri_stop_order_data_list,
-                      key=lambda x: (x.datetime, x.stop_orderid.split(".")[1] if x.datetime == x.datetime else 0),
-                      reverse=True)
+                      key=lambda x: (x.datetime, x.stop_orderid.split(".")[1] if x.datetime == x.datetime else 0))
 
     def StrategyManagerChoose(self):
         """"""
