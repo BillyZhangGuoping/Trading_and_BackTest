@@ -10,6 +10,7 @@ from vnpy.app.cta_strategy.backtesting import BacktestingEngine, OptimizationSet
 from vnpy.trader import optimize
 # 策略类是用字符串格式记录的，然后用eval方法关联类，所以必须引用，虽然编辑器提示未使用
 from vnpy.app.cta_strategy.strategies.bar_jump_trend_bt import BT_BarJumpTrendDownStrategy
+from vnpy.app.cta_strategy.strategies.bar_ma_trend import BarMaTrendStrategy
 from vnpy.app.cta_strategy.strategies.king_keltner_strategy import KingKeltnerStrategy
 from vnpy.app.cta_strategy.strategies.turtle_signal_strategy import TurtleSignalStrategy
 from vnpy.app.cta_strategy.strategies.double_ma_strategy import DoubleMaStrategy

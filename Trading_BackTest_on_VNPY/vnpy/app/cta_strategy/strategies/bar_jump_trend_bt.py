@@ -110,7 +110,7 @@ class BT_BarJumpTrendDownStrategy(CtaTemplate):
         self.close_indicator = 0
 
 
-        self.high_limit = 0
+        self.high_limit = 9000000
         self.low_limit = 0
 
 
