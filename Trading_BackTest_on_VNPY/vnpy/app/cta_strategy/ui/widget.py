@@ -1377,6 +1377,14 @@ class TriggeredStopOrderMonitor(BaseMonitor):
         super(TriggeredStopOrderMonitor, self).process_event(event)
         self.horizontalHeader().resizeSections(QtWidgets.QHeaderView.ResizeToContents)
 
+    def insert_new_row(self,data: Any):
+        super(TriggeredStopOrderMonitor, self).insert_new_row(data=data)
+
+        if data.stop_orderid.split("_")[-1] == "Rollover":
+            for col in range(self.columnCount()):
+                self.item(0, col).setBackground(QtGui.QColor(128, 128, 128))
+
+
     def readyforExport(self,days = 1):
         end = datetime.now()
         start = end - timedelta(days)
