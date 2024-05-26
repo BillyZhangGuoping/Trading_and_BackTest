@@ -5,7 +5,7 @@ import pandas as pd
 from vnpy.trader.mddata import mddata_client
 from vnpy.trader.constant import Exchange
 from collections import deque
-from vnpy.trader.utility import load_json,get_folder_path
+from vnpy.trader.utility import load_json,get_folder_path,save_json
 from datetime import datetime
 import webbrowser
 class TrendFutureAnalyzer:
@@ -19,7 +19,7 @@ class TrendFutureAnalyzer:
         self.login_jq()
         tofile = []
         for symbol in self.symbol_list:
-            df = self.calculate_emas(future_code = symbol,periods =[3,5,10,20,30,60])
+            df = self.calculate_emas(future_code = symbol,periods =[2,5,10,20,30,60])
             tofile.append(self.check_trend(df))
 
         # 获取当天日期并生成文件名
@@ -123,6 +123,17 @@ class TrendFutureAnalyzer:
                 output = output + f"在{count}个交易日之前，均线下"
         return output
 
+    def export_column_to_json(self, vn_symbol_name):
+        self.login_jq()
+        df = self.calculate_emas(future_code = vn_symbol_name,periods =[2,5,10,20,30,60])
+        json_data = df["Comparison_Result"].to_json(orient='values')
+        today = datetime.today().strftime("%Y%m%d")
+        fold_path = get_folder_path("trendquery")
+        file_name = fold_path.joinpath(f"{vn_symbol_name}.json")
+        save_json(file_name,json_data)
+
+
+
 if __name__ == "__main__":
-    futuretrend =TrendFutureAnalyzer()
-    futuretrend.review_symbol_list()
+    futuretrend =TrendFutureAnalyzer(days=50000)
+    futuretrend.export_column_to_json("i8888.DCE")

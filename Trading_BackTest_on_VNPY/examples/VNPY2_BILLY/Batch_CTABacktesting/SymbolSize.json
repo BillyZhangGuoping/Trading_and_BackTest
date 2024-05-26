@@ -1,144 +1,156 @@
 {
   "m2": {
-    "rate": 0.0,
+    "rate": 0.00001,
     "slippage": 0,
     "size": 10,
     "pricetick": 1
   },
     "lu": {
-    "rate": 0.0,
+    "rate": 0.00001,
     "slippage": 0,
     "size": 10,
     "pricetick": 1
   },
       "b2": {
-    "rate": 0.0,
+    "rate": 0.0001,
     "slippage": 0,
     "size": 10,
     "pricetick": 1
   },
+        "zn": {
+    "rate": 1.5,
+    "slippage": 0,
+    "size": 5,
+    "pricetick": 5
+  },
     "hc": {
-    "rate": 0.0,
+    "rate": 0.0001,
     "slippage": 0,
     "size": 10,
     "pricetick": 1
   },
   "UR": {
-    "rate": 0.0,
+    "rate": 0.0001,
     "slippage": 0,
     "size": 10,
     "pricetick": 1
   },
   "SA": {
-    "rate": 0.0,
+    "rate": 0.0001,
     "slippage": 0,
     "size": 20,
     "pricetick": 1
   },
   "MA": {
-    "rate": 0.0,
+    "rate": 0.0001,
     "slippage": 0,
     "size": 10,
     "pricetick": 1
   },
   "rb": {
-    "rate": 0.0,
+    "rate": 0.0001,
     "slippage": 0,
     "size": 10,
     "pricetick": 1
   },
   "SR": {
-    "rate": 0.0,
+    "rate": 0.0001,
     "slippage": 0,
     "size": 10,
     "pricetick": 1
   },
   "ru": {
-    "rate": 0.0,
+    "rate": 1.5,
     "slippage": 0,
     "size": 10,
     "pricetick": 5
   },
+    "pb": {
+    "rate": 0.00002,
+    "slippage": 0,
+    "size": 5,
+    "pricetick": 5
+  },
   "TA": {
-    "rate": 0.0,
+    "rate": 0.0001,
     "slippage": 0,
     "size": 5,
     "pricetick": 1
   },
   "i9": {
-    "rate": 0.0,
+    "rate": 0.0001,
     "slippage": 0,
     "size": 100,
     "pricetick": 0.5
   },
   "i2": {
-    "rate": 0.0,
+    "rate": 0.0001,
     "slippage": 0,
     "size": 100,
     "pricetick": 0.5
   },
   "CF": {
-    "rate": 0.0,
+    "rate": 0.0001,
     "slippage": 0,
     "size": 5,
     "pricetick": 1
   },
   "ag": {
-    "rate": 0.0,
+    "rate": 0.00001,
     "slippage": 0,
     "size": 15,
     "pricetick": 1
   },
   "pp": {
-    "rate": 0.0,
+    "rate": 0.0001,
     "slippage": 0,
     "size": 5,
     "pricetick": 1
   },
   "fu": {
-    "rate": 0.0,
+    "rate": 0.00002,
     "slippage": 0,
     "size": 10,
     "pricetick": 1
   },
   "sp": {
-    "rate": 0.0,
+    "rate": 0.000025,
     "slippage": 0,
     "size": 10,
     "pricetick": 2
   },
   "y2": {
-    "rate": 0.0,
+    "rate": 0.0001,
     "slippage": 0,
     "size": 10,
     "pricetick": 1
   },
   "c2": {
-    "rate": 0.0,
+    "rate": 0.0001,
     "slippage": 0,
     "size": 10,
     "pricetick": 1
   },
   "bu": {
-    "rate": 0.0,
+    "rate": 0.000025,
     "slippage": 0,
     "size": 10,
     "pricetick": 1
   },
   "FG": {
-    "rate": 0.0,
+    "rate": 0.0001,
     "slippage": 0,
     "size": 20,
     "pricetick": 1
   },
   "p2": {
-    "rate": 0.0,
+    "rate": 0.0001,
     "slippage": 0,
     "size": 10,
     "pricetick": 1
   },
   "RM": {
-    "rate": 0.0,
+    "rate": 0.0001,
     "slippage": 0,
     "size": 10,
     "pricetick": 1

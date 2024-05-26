@@ -14,6 +14,8 @@ from vnpy.app.cta_strategy.strategies.bar_ma_trend import BarMaTrendStrategy
 from vnpy.app.cta_strategy.strategies.king_keltner_strategy import KingKeltnerStrategy
 from vnpy.app.cta_strategy.strategies.turtle_signal_strategy import TurtleSignalStrategy
 from vnpy.app.cta_strategy.strategies.double_ma_strategy import DoubleMaStrategy
+from vnpy.app.cta_strategy.strategies.bar_ema_trend import BarEMaTrendStrategy
+from vnpy.app.cta_strategy.strategies.bar_ema_trend_actual import BarEMaTrendActaulStrategy
 from vnpy.app.cta_strategy.strategies.atr_rsi_strategy import (
     AtrRsiStrategy,
 )
@@ -61,7 +63,7 @@ class BatchCTABackTest:
 		进行回测
 		"""
 		resultDf = DataFrame()
-		vt_symbol = strategy_setting[0]["vt_symbol"]
+		vt_symbol = strategy_setting[0]["symbol"]
 		class_name = strategy_setting[0]["class_name"]
 		param_settings = []
 
@@ -80,7 +82,7 @@ class BatchCTABackTest:
 
 		return result
 
-	def runBatchTest(self, strategy_setting, startDate, endDate, portfolio):
+	def runBatchTest(self, strategy_setting, startDate, endDate, portfolio = False):
 		"""
 		进行回测
 		"""
@@ -88,7 +90,7 @@ class BatchCTABackTest:
 		dfportfolio = None
 		for strategy_name, strategy_config in strategy_setting.items():
 			self.engine.clear_data()
-			vt_symbol = strategy_config["vt_symbol"]
+			vt_symbol = strategy_config["symbol"]
 			self.engine = self.addParameters(self.engine, vt_symbol, startDate, endDate)
 			if type(strategy_config["setting"]) is str:
 				print(eval(strategy_config["setting"]))
@@ -115,7 +117,7 @@ class BatchCTABackTest:
 			resultDict["0strategy_name"] = strategy_name
 			resultDict["1class_name"] = strategy_config["class_name"]
 			resultDict["3setting"] = strategy_config["setting"]
-			resultDict["2vt_symbol"] = strategy_config["vt_symbol"]
+			resultDict["2vt_symbol"] = strategy_config["symbol"]
 			resultDf = resultDf.append(resultDict, ignore_index=True)
 
 		if portfolio == True:
@@ -171,7 +173,7 @@ class BatchCTABackTest:
 
 
 	def runBatchTestExcecl(self, path="ctaStrategy.xlsx",startDate=datetime(2019,6,8),
-	                     endDate=datetime(2019, 12, 1), vt_symbol = None, exporpath=None, portfolio=False):
+	                     endDate=datetime(2019, 12, 1), vt_symbol = None, exporpath=None, mutiple = False):
 		"""
 		从ctaStrategy.excel去读交易策略和参数，进行回测
 		"""
@@ -180,8 +182,11 @@ class BatchCTABackTest:
 		if vt_symbol:
 			# strategy_setting["vt_symbol"] = vt_symbol
 			for strategy_name, strategy_config in strategy_setting.items():
-				strategy_config["vt_symbol"] = vt_symbol
-		resultDf = self.runBatchTestMultiple(strategy_setting, startDate, endDate)
+				strategy_config["symbol"] = vt_symbol
+		if mutiple:
+			resultDf = self.runBatchTestMultiple(strategy_setting, startDate, endDate)
+		else:
+			resultDf = self.runBatchTest(strategy_setting, startDate, endDate)
 
 		exportname = "BatchTestExcel_" + strategy_setting[0]['class_name'] +"+" + vt_symbol
 		self.ResultExcel(resultDf, exportname, exporpath)

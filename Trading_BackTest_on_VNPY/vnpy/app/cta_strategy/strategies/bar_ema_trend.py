@@ -18,7 +18,7 @@ from datetime import time
 from vnpy.trader.utility import round_to,floor_to
 
 
-class BarMaTrendStrategy(CtaTemplate):
+class BarEMaTrendStrategy(CtaTemplate):
     """"""
 
     author = "BIlly Zhang"
@@ -32,7 +32,9 @@ class BarMaTrendStrategy(CtaTemplate):
     fixed_size = 1
 
 
-    PERIOD_LENGTH = 5
+    QUICK_LENGTH =5
+    SLOW_LENGTH = 20
+    CUT_LENGTH =4
     MARK_UP = 20
     MARK_DOWN = 10
     CLOSE_WINDOWS = 10
@@ -58,10 +60,11 @@ class BarMaTrendStrategy(CtaTemplate):
         "pricetick",
         "Kxian",
         "CLOSE_WINDOWS",
-        "PERIOD_LENGTH",
-        "MARK_DOWN",
+        "QUICK_LENGTH",
+        "SLOW_LENGTH",
+        "CUT_LENGTH",
         "OPEN_RATIO",
-        "CLOSE_RATIO",
+        "MARK_DOWN",
         "MARK_UP"
     ]
     variables = [
@@ -92,11 +95,8 @@ class BarMaTrendStrategy(CtaTemplate):
         self.high_limit = 1000000
         self.low_limit = 0
 
-        self.period_list = [5,10,20,30,60,90,120]
+        self.am = ArrayManager(60)
 
-        self.am = ArrayManager(self.period_list[self.PERIOD_LENGTH-1]+20)
-        self.period_list = self.period_list[:self.PERIOD_LENGTH]
-        self.close_period_list = self.period_list[1:]
         self.trend = 0
         self.last_trend = 0
 
@@ -126,8 +126,8 @@ class BarMaTrendStrategy(CtaTemplate):
             self.start_timePM = time(hour=8, minute=59)
             self.start_timeNI = time(hour=20, minute=59)
 
-        self.exit_timeAM = time(hour=14, minute=45)
-        self.exit_timeNI = time(hour=22, minute=45)
+        self.exit_timeAM = time(hour=14, minute=50)
+        self.exit_timeNI = time(hour=22, minute=50)
 
         self.exit_open_timeAM = time(hour=14, minute=45)
         self.exit_open_timeNI = time(hour=22, minute=45)
@@ -237,15 +237,22 @@ class BarMaTrendStrategy(CtaTemplate):
         self.close_count_down -= 1
         self.bg.update_bar(bar)
 
-    def check_sequence(self,sequence):
-        is_increasing = all(sequence[i] + self.gap <=sequence[i + 1] for i in range(len(sequence) - 1))
-        is_decreasing = all(sequence[i] >= sequence[i + 1] + self.gap for i in range(len(sequence) - 1))
+    def check_inc_or_dec(self, a, b, gap):
+        c = [i - j for i, j in zip(a, b)]
+        is_increasing = True
+        is_decreasing = True
 
-        if is_increasing:
+        for i in range(1, len(c)):
+            if c[i] <= c[i - 1] or c[i] < gap :
+                is_increasing = False
 
-            return -1
-        elif is_decreasing:
+            if c[i] >= c[i - 1] or c[i] > -gap:
+                is_decreasing = False
+
+        if is_increasing and c[0] < gap:
             return 1
+        elif is_decreasing and c[0] > -gap:
+            return -1
         else:
             return 0
 
@@ -255,32 +262,24 @@ class BarMaTrendStrategy(CtaTemplate):
         if not am.inited:
             return
 
-        ema_result = []
-        if self.pos == 0:
-            period_list = self.period_list
-        else:
-            period_list =self.close_period_list
-        for ema_length in period_list:
-            ema_result.append(am.ema(ema_length))
-        self.trend = self.check_sequence(ema_result)
+        # ema_result = []
+        # if self.pos == 0:
+        #     period_list = self.period_list
+        # else:
+        #     period_list =self.close_period_list
+        # for ema_length in period_list:
+        #     ema_result.append(am.sma(ema_length))
+        ema_quick = am.ema(self.QUICK_LENGTH,True)[-self.CUT_LENGTH:]
+        ema_slow = am.ema(self.SLOW_LENGTH,True)[-self.CUT_LENGTH:]
+        self.trend = self.check_inc_or_dec(ema_quick,ema_slow,self.gap)
 
         if not self.not_trading_time:
-                if self.trend == 1 and self.last_trend == 0:
-                    if self.pos == 0:
-                        self.buy(price=bar.close_price + self.pricetick, volume=self.fixed_size, stop=False)
-                elif self.trend == -1 and self.last_trend == 0:
-                    if self.pos == 0:
-                        self.short(price=bar.close_price + self.pricetick, volume=self.fixed_size, stop=False)
-                if self.pos > 0 :
-                    if self.close_count_down <= 0:
-                        # self.close_indicator = 1
-                        self.cancel_all()
-                        self.close_request = self.sell(bar.close_price - self.pricetick, self.pos, False)
-                elif self.pos < 0:
-                    if self.close_count_down <= 0:
-                        # self.close_indicator = -1
-                        self.cancel_all()
-                        self.close_request = self.cover(bar.close_price + self.pricetick, abs(self.pos), False)
+            if self.pos == 0:
+                self.cancel_all()
+                if self.trend == 1:
+                        self.buy(price=bar.close_price, volume=self.fixed_size, stop=False)
+                elif self.trend == -1:
+                        self.short(price=bar.close_price, volume=self.fixed_size, stop=False)
 
         self.last_trend = self.trend
         self.put_event()
@@ -303,7 +302,6 @@ class BarMaTrendStrategy(CtaTemplate):
             self.Touch_JUMP = 0
             self.entry_price = trade.price
             self.close_count_down = self.CLOSE_WINDOWS
-            self.gap = self.pricetick *self.CLOSE_RATIO
             if trade.direction ==  Direction.LONG:
                 self.high_close = min(trade.price + self.mark_up,self.high_limit)
                 self.sell(self.high_close, trade.volume, False)
@@ -312,8 +310,7 @@ class BarMaTrendStrategy(CtaTemplate):
                 self.high_close = trade.price + self.mark_down
                 self.low_close = max(trade.price - self.mark_up, self.low_limit)
                 self.cover(self.low_close, trade.volume, False)
-        else:
-            self.gap = self.pricetick * self.OPEN_RATIO
+
 
 
     def on_stop_order(self, stop_order: StopOrder):
