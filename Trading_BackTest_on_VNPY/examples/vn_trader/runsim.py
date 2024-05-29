@@ -159,16 +159,16 @@ def run_parent():
             print("关闭子进程")
             child_process.terminate()
             child_process = None
-
-        if time(8, 32) >= current_time >= time(8, 21) and dayofweek < 5 and child_process_child_JQDominantCheck is None:
-            print("启动主力合约查询子进程")
-            child_process_child_JQDominantCheck = multiprocessing.Process(target=run_child_JQDominantCheck)
-            child_process_child_JQDominantCheck.start()
-
-        if (child_process_child_JQDominantCheck is not None) and current_time > time(8, 32):
-            print("关闭主力合约查询子进程")
-            child_process_child_JQDominantCheck.terminate()
-            child_process_child_JQDominantCheck = None
+        #
+        # if time(8, 32) >= current_time >= time(8, 21) and dayofweek < 5 and child_process_child_JQDominantCheck is None:
+        #     print("启动主力合约查询子进程")
+        #     child_process_child_JQDominantCheck = multiprocessing.Process(target=run_child_JQDominantCheck)
+        #     child_process_child_JQDominantCheck.start()
+        #
+        # if (child_process_child_JQDominantCheck is not None) and current_time > time(8, 32):
+        #     print("关闭主力合约查询子进程")
+        #     child_process_child_JQDominantCheck.terminate()
+        #     child_process_child_JQDominantCheck = None
 
 
         sleep(60)
