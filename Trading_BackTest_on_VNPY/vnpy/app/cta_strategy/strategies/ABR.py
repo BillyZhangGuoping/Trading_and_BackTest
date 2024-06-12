@@ -20,12 +20,12 @@ class ABR(CtaTemplate):
     init_pos = 0
     init_entry_price = 0.0
 
-    Kxian = ''
-    beishu = 0
-    Length = 0
-    stoploss_percent = 0
-    HeYueJiaZhi = 0
-    HeYueChengShu = 0
+    Kxian = '30m'
+    beishu = 3.5
+    Length = 35
+    stoploss_percent = 0.00125
+    HeYueJiaZhi = 10000000
+    HeYueChengShu = 10
 
     entry_price = 0.0
     long_entry = 0.0
@@ -38,7 +38,6 @@ class ABR(CtaTemplate):
         """"""
         super().__init__(cta_engine, strategy_name, vt_symbol, vt_local, setting)
         self.first = True
-
         # self.canshu = self.canshuDict[strategy_name]
         # self.Kxian = self.canshu[0]
         # self.beishu = self.canshu[2]
@@ -63,19 +62,22 @@ class ABR(CtaTemplate):
         Callback when strategy is inited.
         """
         # Billy move to on_init
-        self.canshuDict = load_json(self.inside_setting_filename)
-        self.canshu = self.canshuDict[self.strategy_name]
-        self.Kxian = self.canshu[0]
-        self.beishu = self.canshu[2]
-        self.Length = self.canshu[1]
-        self.stoploss_percent = self.canshu[3]
-        self.HeYueJiaZhi = self.canshu[4]
-        self.HeYueChengShu = self.canshu[5]
+        # self.canshuDict = load_json(self.inside_setting_filename)
+        # self.canshu = self.canshuDict[self.strategy_name]
+        # self.Kxian = self.canshu[0]
+        # self.beishu = self.canshu[2]
+        # self.Length = self.canshu[1]
+        # self.stoploss_percent = self.canshu[3]
+        # self.HeYueJiaZhi = self.canshu[4]
+        # self.HeYueChengShu = self.canshu[5]
         # self.cansshu = load_json(self.inside_setting_filename)
         # self.cansshu[strategy_name] = self.canshu
         # save_json(self.inside_setting_filename, self.cansshu)
+        self.Length = int(self.Length)
         if self.Kxian == "1h":
             self.bg = BarGenerator(self.on_bar, 1, self.on_window_bar, Interval.HOUR)
+        elif self.Kxian == "3h":
+            self.bg = BarGenerator(self.on_bar, 3, self.on_window_bar, Interval.HOUR)
         elif self.Kxian == "4h":
             self.bg = BarGenerator(self.on_bar, 4, self.on_window_bar, Interval.HOUR)
         elif self.Kxian == "30m":
@@ -87,13 +89,15 @@ class ABR(CtaTemplate):
         self.pos = self.init_pos
         self.entry_price = self.init_entry_price
         self.PosPrice = self.entry_price
-        self.load_bar(90)
+        self.load_bar(30)
         # self.write_log("策略初始化")
 
     def on_start(self):
         """
         Callback when strategy is started.
         """
+        if self.HeYueJiaZhi == 0 or self.HeYueJiaZhi == 0:
+            return
         if self.pos == 0:
             self.buy(self.long_entry, self.trading_size_long, stop=True, net=True)
             self.short(self.short_entry, self.trading_size_short, stop=True, net=True)
@@ -125,9 +129,9 @@ class ABR(CtaTemplate):
         """
         Callback of new tick data update.
         """
-        if self.first == True:
-            self.write_log(f"开盘tick时间：{tick.datetime.strftime('%Y%m%d %H:%M:%S.%f')}")
-            self.first = False
+        # if self.first == True:
+        #     self.write_log(f"开盘tick ：{tick}")
+        #     self.first = False
         self.bg.update_tick(tick)
 
     def on_bar(self, bar: BarData):
@@ -142,10 +146,11 @@ class ABR(CtaTemplate):
         """
         Callback of new bar data update.
         """
-        if self.trading:
-            self.write_log(f"当前bar信息 开始时间：{bar.datetime.strftime('%Y%m%d %H:%M:%S.%f')};bar信息 {bar}")
+        # if self.trading:
+            # self.write_log(f"当前bar信息 开始时间：{bar.datetime.strftime('%Y%m%d %H:%M:%S.%f')};开始价格 {bar.open_price}，结束价格{bar.close_price},最高价{bar.high_price},低价{bar.low_price}")
 
         self.cancel_all()
+
         # self.write_log(bar)
 
         self.am.update_bar(bar)
@@ -162,6 +167,10 @@ class ABR(CtaTemplate):
         self.short_entry = round(self.AveMa - self.Trig, 1)
         self.trading_size_long = round((self.HeYueJiaZhi / self.HeYueChengShu) / self.long_entry)
         self.trading_size_short = round((self.HeYueJiaZhi / self.HeYueChengShu) / self.short_entry)
+
+        if self.HeYueJiaZhi == 0 or self.HeYueJiaZhi == 0:
+            self.put_event()
+            return
 
         if self.pos == 0:
             self.buy(self.long_entry, self.trading_size_long, stop=True, net=True)

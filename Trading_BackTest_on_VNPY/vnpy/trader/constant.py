@@ -146,6 +146,7 @@ class Exchange(Enum):
 
     # Special Function
     LOCAL = "LOCAL"         # For local generated data
+    HOT = "HOT"  # For Hot futures
 
 
 class Currency(Enum):

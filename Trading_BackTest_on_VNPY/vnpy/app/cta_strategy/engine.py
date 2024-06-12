@@ -346,7 +346,7 @@ class CtaEngine(BaseEngine):
         data = event.data
         self.CurrMarginPrecent = data.CurrMargin / data.balance
 
-    def check_stop_order(self, tick: TickData):
+    def  check_stop_order(self, tick: TickData):
         """"""
         for stop_order in list(self.stop_orders.values()):
             if stop_order.vt_symbol != tick.vt_symbol:

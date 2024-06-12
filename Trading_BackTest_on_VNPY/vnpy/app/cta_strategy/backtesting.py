@@ -82,6 +82,12 @@ class BacktestingEngine:
         self.daily_results = {}
         self.daily_df = None
 
+        # Add for hot multi test
+        self.contract_num = 1
+        self.legacy_trade = None
+        self.last_bar = None
+        self.trading_start_date: datetime = None
+
     def clear_data(self):
         """
         Clear all data of last backtesting.
@@ -119,7 +125,7 @@ class BacktestingEngine:
         mode: BacktestingMode = BacktestingMode.BAR,
         inverse: bool = False,
         risk_free: float = 0,
-        annual_days: int = 240
+        annual_days: int = 240,
     ):
         """"""
         self.mode = mode
@@ -140,6 +146,7 @@ class BacktestingEngine:
         self.inverse = inverse
         self.risk_free = risk_free
         self.annual_days = annual_days
+
 
     def add_strategy(self, strategy_class: type, vt_local, setting: dict):
         """"""
@@ -173,7 +180,7 @@ class BacktestingEngine:
 
         while start < self.end:
             progress_bar = "#" * int(progress * 10 + 1)
-            self.output(f"加载进度：{progress_bar} [{progress:.0%}]")
+            # self.output(f"加载进度：{progress_bar} [{progress:.0%}]")
 
             end = min(end, self.end)  # Make sure end time stays within set range
 
@@ -203,13 +210,6 @@ class BacktestingEngine:
 
         self.output(f"历史数据加载完成，数据量：{len(self.history_data)}")
 
-    def convert_hot_normal(self):
-        """
-        按时段分割主力合约
-
-        :return:
-        """
-        pass
 
     def run_backtesting(self):
         """"""
@@ -225,10 +225,29 @@ class BacktestingEngine:
         ix = 0
 
         for ix, data in enumerate(self.history_data):
-            if self.datetime and data.datetime.day != self.datetime.day:
+            if self.trading_start_date is None and self.datetime and data.datetime.day != self.datetime.day:
                 day_count += 1
                 if day_count >= self.days:
                     break
+            elif self.trading_start_date and data.datetime > self.trading_start_date:
+                #如果bar的时间大于等于上个合约最后最后一个bar,如果self.legacy_trade存在，则新建一个trade放入
+                if self.legacy_trade:
+                    new_trade = self.legacy_trade
+                    new_trade.symbol = data.symbol
+                    new_trade.datetime = data.datetime
+                    new_trade.orderid = str(self.trade_count)
+                    new_trade.tradeid = str(self.trade_count)
+                    new_trade.vt_tradeid = f"{self.gateway_name}.{new_trade.tradeid}"
+                    new_trade.price = new_trade.price  + (data.open_price - self.last_bar.close_price)
+                    self.trades[new_trade.vt_tradeid] = new_trade
+                    self.output(f"****生成移仓开单，上个bar结束价格{self.last_bar.close_price}，当前bar开仓价格{data.open_price}"
+                                   f"交易编号{new_trade.tradeid},"
+                                   f"时间{new_trade.datetime},合约{new_trade.symbol},价格{new_trade.price},方向{new_trade.direction}")
+                    # 在strategy中新增移仓开单数据
+                    self.strategy.pos = new_trade.volume if new_trade.direction == Direction.LONG else -new_trade.volume
+                    self.strategy.entry_price = new_trade.price
+                    self.strategy.PosPrice = new_trade.price
+                break
 
             self.datetime = data.datetime
 
@@ -239,11 +258,13 @@ class BacktestingEngine:
                 self.output(traceback.format_exc())
                 return
 
+
         self.strategy.inited = True
         self.output("策略初始化完成")
 
         self.strategy.on_start()
         self.strategy.trading = True
+
         self.output("开始回放历史数据")
 
         # Use the rest of history data for running backtesting
@@ -254,6 +275,8 @@ class BacktestingEngine:
 
         total_size = len(backtesting_data)
         batch_size = max(int(total_size / 10), 1)
+
+
 
         for ix, i in enumerate(range(0, total_size, batch_size)):
             batch_data = backtesting_data[i: i + batch_size]
@@ -270,6 +293,41 @@ class BacktestingEngine:
             self.output(f"回放进度：{progress_bar} [{progress:.0%}]")
 
         self.strategy.on_stop()
+
+
+        if self.contract_num > 1:
+            # TODO 如果后续还有合约，读取当前是否self.trades最后一个trade，如果是open，从self.trades pop这条
+            # 传入self.legacy_trade,然后修改价差后放入下一个合约的self.trades,然后保留最后一个bar。
+            self.legacy_trade = None
+            self.last_bar = copy.copy(backtesting_data[-1])
+            self.trading_start_date = self.last_bar.datetime
+            self.contract_num  = self.contract_num -1
+            if self.trades:
+                last_trade_tuple = list(self.trades.items())[-1]
+                # last_trade = self.trades[self.gateway_name + "."+ str(self.trade_count)]
+                last_trade =last_trade_tuple[-1]
+                if last_trade.offset == Offset.OPEN:
+                    self.legacy_trade = copy.copy(last_trade)
+                    # 如果有未平的deal，生成一个对应平仓deal，对应时间最后一个bar
+                    self.write_log(f"存在未平的交易，交易编号{last_trade.tradeid},"
+                                   f"时间{last_trade.datetime},价格{last_trade.price},方向{last_trade.direction}")
+                    rollover_trade = copy.copy(last_trade)
+                    if last_trade.direction == Direction.LONG:
+                        rollover_trade.direction = Direction.SHORT
+                    else:
+                        rollover_trade.direction = Direction.LONG
+                    rollover_trade.offset = Offset.CLOSE
+                    rollover_trade.tradeid = str(int(rollover_trade.tradeid)+1)
+                    rollover_trade.orderid = str(int(rollover_trade.orderid)+1)
+                    rollover_trade.datetime = self.trading_start_date
+                    rollover_trade.vt_tradeid = f"{self.gateway_name}.{rollover_trade.tradeid}"
+                    self.trades[rollover_trade.vt_tradeid] = rollover_trade
+                    self.output(f"****生成同价位移仓平单，交易编号{rollover_trade.tradeid},"
+                                   f"时间{rollover_trade.datetime},合约{rollover_trade.symbol},价格{rollover_trade.price},方向{rollover_trade.direction}")
+
+                    # self.trades.pop(last_trade_tuple[0])
+
+
         self.output("历史数据回放结束")
 
     def calculate_result(self,db_traders = None):
@@ -315,6 +373,7 @@ class BacktestingEngine:
                 results[key].append(value)
 
         self.daily_df = DataFrame.from_dict(results).set_index("date")
+
 
         self.output("逐日盯市盈亏计算完成")
         return self.daily_df
@@ -777,7 +836,7 @@ class BacktestingEngine:
 
     run_optimization = run_bf_optimization
 
-    def run_ga_optimization(self, Welcome: OptimizationSetting, output=True):
+    def run_ga_optimization(self, optimization_setting, output=True):
         """"""
         if not check_optimization_setting(optimization_setting):
             return
@@ -879,10 +938,13 @@ class BacktestingEngine:
 
             if long_cross:
                 trade_price = min(order.price, long_best_price)
+                # trade_price = order.price
                 pos_change = order.volume
             else:
                 trade_price = max(order.price, short_best_price)
+                # trade_price = order.price
                 pos_change = -order.volume
+
 
             trade = TradeData(
                 symbol=order.symbol,

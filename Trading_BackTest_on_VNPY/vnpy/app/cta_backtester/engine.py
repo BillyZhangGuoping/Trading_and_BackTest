@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from threading import Thread
 from pathlib import Path
 from inspect import getfile
+import pandas as pd
 
 from vnpy.trader.mddata import mddata_client
 from vnpy.trader.setting import SETTINGS
@@ -149,52 +150,79 @@ class BacktesterEngine(BaseEngine):
         inverse: bool,
         setting: dict
     ):
-        """"""
+        """
+        """
         self.result_df = None
         self.result_statistics = None
 
         engine = self.backtesting_engine
-        engine.clear_data()
+        backtest_list = self.process_symbol(vt_symbol, start, end, subtract_days=0)
+        result_df_list = []
+        trades_list = []
+        daily_results_dict = {}
+        # 将要测试的实际合约数量
+        engine.contract_num = len(backtest_list)
 
-        if interval == Interval.TICK.value:
-            mode = BacktestingMode.TICK
-        else:
-            mode = BacktestingMode.BAR
+        for backtest_item in backtest_list:
+            actual_start = backtest_item['start_date'].astimezone(LOCAL_TZ)
+            end = backtest_item['end_date'].astimezone(LOCAL_TZ)
+            start = actual_start - timedelta(days= 60)
+            vt_symbol = backtest_item['contract_code']
+            self.write_log(
+                f"----------------------"
+                f"从{self.convertTime(backtest_item['start_date'])} 到 {self.convertTime(backtest_item['end_date'])} 的"
+                f"主力合约是 {backtest_item['contract_code']}")
 
-        engine.set_parameters(
-            vt_symbol=vt_symbol,
-            interval=interval,
-            start=start,
-            end=end,
-            rate=rate,
-            slippage=slippage,
-            size=size,
-            pricetick=pricetick,
-            capital=capital,
-            inverse=inverse,
-            mode=mode
-        )
-        vt_local = "1"
-        strategy_class = self.classes[class_name]
+            engine.clear_data()
 
-        engine.add_strategy(
-            strategy_class,
-            vt_local,
-            setting
-        )
+            if interval == Interval.TICK.value:
+                mode = BacktestingMode.TICK
+            else:
+                mode = BacktestingMode.BAR
 
-        engine.load_data()
+            engine.set_parameters(
+                vt_symbol=vt_symbol,
+                interval=interval,
+                start=start,
+                end=end,
+                rate=rate,
+                slippage=slippage,
+                size=size,
+                pricetick=pricetick,
+                capital=capital,
+                inverse=inverse,
+                mode=mode
+            )
+            vt_local = "1"
+            strategy_class = self.classes[class_name]
 
-        try:
-            engine.run_backtesting()
-        except Exception:
-            msg = f"策略回测失败，触发异常：\n{traceback.format_exc()}"
-            self.write_log(msg)
+            engine.add_strategy(
+                strategy_class,
+                vt_local,
+                setting
+            )
 
-            self.thread = None
-            return
+            engine.load_data()
 
-        self.result_df = engine.calculate_result()
+            try:
+                engine.run_backtesting()
+            except Exception:
+                msg = f"策略回测失败，触发异常：\n{traceback.format_exc()}"
+                self.write_log(msg)
+
+                self.thread = None
+                return
+
+            trades_list.extend(self.get_all_trades())
+            result_df_list.append(engine.calculate_result())
+            daily_results_dict.update(engine.daily_results)
+
+
+        self.result_df = pd.concat(result_df_list)
+        dict_trades_data = {f'BACKTESTING.{i + 1}': value for i, value in enumerate(trades_list)}
+        engine.trades = dict_trades_data
+        engine.daily_results = daily_results_dict
+        engine.daily_df = self.result_df
         self.result_statistics = engine.calculate_statistics(output=False)
 
         # Clear thread object handler.
@@ -378,7 +406,21 @@ class BacktesterEngine(BaseEngine):
 
         return True
 
-
+    def process_symbol(self, vt_symbol, start, end, subtract_days=0):  # 增加了可设置减去天数的参数，默认为 0
+        hot_symbol, hot_exchange = vt_symbol.split(".")
+        result = []
+        if hot_exchange == "HOT":
+            hot_handler = HotFuturesHandler(hot_symbol)
+            download_list = hot_handler.get_daily_contracts(start, end)
+            self.write_log(f"{vt_symbol}-对应的主力合约分别为：")
+            for query_item in download_list:
+                self.write_log(f"从{self.convertTime(query_item['start_date'])} 到 {self.convertTime(query_item['end_date'])} 的"
+                               f"主力合约是 {query_item['contract_code']}")
+                query_item['start_date'] = query_item['start_date'] - timedelta(days=subtract_days)  # 根据传入参数减去相应天数
+                result.append(query_item)
+        else:
+            result.append({'start_date': start, 'end_date': end, 'contract_code': vt_symbol})
+        return result
 
     def run_downloading(
         self,
@@ -390,19 +432,7 @@ class BacktesterEngine(BaseEngine):
         """
         Query bar data from JQData.
         """
-
-        hot_symbol, hot_exchange = vt_symbol.split(".")
-        if hot_exchange == "HOT":
-            hot_handler = HotFuturesHandler(hot_symbol)
-            download_list = hot_handler.get_daily_contracts(start,end)
-            self.write_log(f"{vt_symbol}-对应的主力合约分别为：")
-            for query_item in download_list:
-                self.write_log(f"从{self.convertTime(query_item['start_date'])} 到 {self.convertTime(query_item['end_date'])} 的"
-                               f"主力合约是 {query_item['contract_code']}")
-                query_item['start_date'] = query_item['start_date'] - timedelta(days = 60)
-
-        else:
-            download_list = [{'start_date': start, 'end_date': end, 'contract_code': vt_symbol}]
+        download_list = self.process_symbol(vt_symbol,start,end,subtract_days=90)
 
         for query_item in download_list:
             start = query_item['start_date'].astimezone(LOCAL_TZ)
@@ -436,38 +466,40 @@ class BacktesterEngine(BaseEngine):
                     )
                 # Otherwise use RQData to query data
                 else:
-                    bar_start = None
-                    bar_end = None
-                    bar_overview_list = database_manager.get_bar_overview()
-                    for bar_overview in bar_overview_list:
-                        if bar_overview.symbol == symbol and bar_overview.exchange == exchange and bar_overview.interval == Interval(interval):
-                            bar_start = bar_overview.start.astimezone(LOCAL_TZ)
-                            bar_end = bar_overview.end.astimezone(LOCAL_TZ)
-                            if bar_start <= start:
-                                req = HistoryRequest(
-                                    symbol=symbol,
-                                    exchange=exchange,
-                                    interval=Interval(interval),
-                                    start=bar_end,
-                                    end=end
-                                )
-                data = mddata_client.query_history(req)
+                    # bar_start = None
+                    # bar_end = None
+                    # bar_overview_list = database_manager.get_bar_overview()
+                    # for bar_overview in bar_overview_list:
+                    #     if bar_overview.symbol == symbol and bar_overview.exchange == exchange and bar_overview.interval == Interval(interval):
+                    #         bar_start = bar_overview.start.astimezone(LOCAL_TZ)
+                    #         bar_end = bar_overview.end.astimezone(LOCAL_TZ)
+                    #         if bar_start <= start:
+                    #             req = HistoryRequest(
+                    #                 symbol=symbol,
+                    #                 exchange=exchange,
+                    #                 interval=Interval(interval),
+                    #                 start=bar_end,
+                    #                 end=end
+                    #             )
+                    data = mddata_client.query_history(req)
 
                 if data:
                     database_manager.save_bar_data(data)
-                    if bar_end:
-                        self.write_log(
-                            f"{symbol}，数据库已有 {self.convertTime(bar_start)} 到 {bar_end}数据，从 {self.convertTime(bar_end)} 到{self.convertTime(end)}历史数据下载完成")
-                    else:
-                        self.write_log(
-                            f"{symbol}，从 {self.convertTime(start)} 到{self.convertTime(end)}历史数据下载完成")
-                else:
-                    if bar_end:
-                        self.write_log(
-                            f"{symbol}，数据库已有 {self.convertTime(bar_start)} 到 {self.convertTime(bar_end)}数据，从 {self.convertTime(bar_end)} 到{self.convertTime(end)}或无历史数据")
-                    else:
-                        self.write_log(
-                            f"{symbol}，从 {self.convertTime(start)} 到{self.convertTime(end)}历史数据下载失败")
+                    self.write_log(
+                        f"{symbol}，从 {self.convertTime(start)} 到{self.convertTime(end)}历史数据下载完成")
+                #     if bar_end:
+                #         self.write_log(
+                #             f"{symbol}，数据库已有 {self.convertTime(bar_start)} 到 {bar_end}数据，从 {self.convertTime(bar_end)} 到{self.convertTime(end)}历史数据下载完成")
+                #     else:
+                #         self.write_log(
+                #             f"{symbol}，从 {self.convertTime(start)} 到{self.convertTime(end)}历史数据下载完成")
+                # else:
+                #     if bar_end:
+                #         self.write_log(
+                #             f"{symbol}，数据库已有 {self.convertTime(bar_start)} 到 {self.convertTime(bar_end)}数据，从 {self.convertTime(bar_end)} 到{self.convertTime(end)}或无历史数据")
+                #     else:
+                #         self.write_log(
+                #             f"{symbol}，从 {self.convertTime(start)} 到{self.convertTime(end)}历史数据下载失败")
 
             except Exception:
                 msg = f"数据下载失败，触发异常：\n{traceback.format_exc()}"

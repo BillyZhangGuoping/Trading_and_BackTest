@@ -18,7 +18,7 @@ from datetime import time
 from vnpy.trader.utility import round_to,floor_to
 
 
-class BarEMaTrendStrategy(CtaTemplate):
+class BarEMaCloseTrendStrategy(CtaTemplate):
     """"""
 
     author = "BIlly Zhang"
@@ -120,14 +120,14 @@ class BarEMaTrendStrategy(CtaTemplate):
         self.not_trading_time = False
 
         if self.cut_min == 0:
-            self.start_timePM = time(hour=9, minute=10)
-            self.start_timeNI = time(hour=21, minute=10)
+            self.start_timePM = time(hour=9, minute=5)
+            self.start_timeNI = time(hour=21, minute=5)
         else:
             self.start_timePM = time(hour=8, minute=59)
             self.start_timeNI = time(hour=20, minute=59)
 
-        self.exit_timeAM = time(hour=14, minute=52)
-        self.exit_timeNI = time(hour=22, minute=52)
+        self.exit_timeAM = time(hour=14, minute=50)
+        self.exit_timeNI = time(hour=22, minute=50)
 
         self.exit_open_timeAM = time(hour=14, minute=45)
         self.exit_open_timeNI = time(hour=22, minute=45)
@@ -288,8 +288,9 @@ class BarEMaTrendStrategy(CtaTemplate):
         #     ema_result.append(am.sma(ema_length))
         ema_quick = am.ema(self.QUICK_LENGTH,True)[-self.CUT_LENGTH:]
         ema_slow = am.ema(self.SLOW_LENGTH,True)[-self.CUT_LENGTH:]
-        ema_dif = [round(i - j,2) for i, j in zip(ema_quick, ema_slow)]
+        ema_dif = [i - j for i, j in zip(ema_quick, ema_slow)]
 
+        close_dif = self.checck_close_trend(am.close[-self.CUT_LENGTH:])
         self.trend = self.check_inc_or_dec(ema_dif,self.gap)
 
 
@@ -297,9 +298,9 @@ class BarEMaTrendStrategy(CtaTemplate):
         if not self.not_trading_time:
             if self.pos == 0:
                 self.cancel_all()
-                if self.trend == 1 and am.close[-1]>= am.close[-2] and bar.close_price >= bar.open_price:
+                if self.trend == 1 and close_dif == 1:
                         self.buy(price=bar.close_price, volume=self.fixed_size, stop=False)
-                elif self.trend == -1 and am.close[-1] <= am.close[-2] and bar.close_price <= bar.open_price:
+                elif self.trend == -1 and close_dif == -1:
                         self.short(price=bar.close_price, volume=self.fixed_size, stop=False)
 
         self.last_trend = self.trend

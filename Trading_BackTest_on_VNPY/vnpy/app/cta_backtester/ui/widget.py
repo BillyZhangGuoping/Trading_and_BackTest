@@ -442,7 +442,7 @@ class BacktesterManager(QtWidgets.QWidget):
             "inverse": inverse,
         }
 
-        # save_json(self.setting_filename, backtesting_setting)
+        save_json(self.setting_filename, backtesting_setting)
 
         # Get strategy setting
         old_setting = self.settings[class_name]

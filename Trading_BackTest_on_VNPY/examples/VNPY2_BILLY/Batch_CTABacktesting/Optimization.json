@@ -1,9 +1,9 @@
 {
   "BT_BarJumpTrendDownStrategy": {
-    "class_name": "BT_BarJumpTrendDownStrategy",
-    "vt_symbol": "ag9999.SHFE",
+    "class_name": "BarEMaTrendStrategy",
+    "vt_symbol": "fu9999.SHFE",
     "startDate": "2023-01-01",
-    "endDate": "2024-04-10",
+    "endDate": "2024-05-10",
     "setting": {
             "init_pos": 0,
             "init_entry_price": 0,
@@ -11,19 +11,14 @@
             "pricetick": 1,
             "HeYueJiaZhi": 100000,
             "HeYueChengShu": 10.0,
-            "CLOSE_WINDOWS": [10,42,10],
-            "OPEN_WINDOWS": [10,42,10],
-            "TRUN_OPEN_LIMIT": [1,6,1],
-            "TURN_CLOSE_LIMIT": 4,
             "Kxian": 1,
-            "cut_min": 0,
-            "STOP_TRADE": 0,
-            "JUMP": [4,19,3],
-            "RATIO": 0,
-            "RATIO2": [0.0,0.7,0.2],
-            "RATIO3": [0.0,0.7,0.2],
-            "MARK_DOWN": [4,20,3],
-            "MARK_UP": [4, 20, 3]
-        }
+            "CLOSE_WINDOWS": 15,
+            "QUICK_LENGTH":[3,7,2],
+            "SLOW_LENGTH":[20,50,10],
+            "CUT_LENGTH":[3,7,2],
+            "OPEN_RATIO":[0.5,2.5,0.5],
+            "MARK_DOWN":[4,6,2],
+            "MARK_UP":[3,5,2]
+    }
   }
 }

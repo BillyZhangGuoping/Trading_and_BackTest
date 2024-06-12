@@ -11,6 +11,7 @@ from vnpy.trader.mddata import mddata_client
 from vnpy.trader.object import (
 	BarData
 )
+from vnpy.trader.database import database_manager
 
 
 class JQDataService:
@@ -224,8 +225,8 @@ class JQDataService:
 		with open(path, "w", encoding='utf-8-sig') as f:
 			resultData.to_excel(path)
 
-if __name__ == '__main__':
 
+if __name__ == '__main__':
 	JQdata = JQDataService()
-	compareResult = JQdata.new_MaxMin(730,5)
-	print(compareResult)
+
+
