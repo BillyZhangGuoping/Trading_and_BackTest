@@ -296,7 +296,7 @@ class BacktestingEngine:
 
 
         if self.contract_num > 1:
-            # TODO 如果后续还有合约，读取当前是否self.trades最后一个trade，如果是open，从self.trades pop这条
+            # DONE 如果后续还有合约，读取当前是否self.trades最后一个trade，如果是open，从self.trades pop这条
             # 传入self.legacy_trade,然后修改价差后放入下一个合约的self.trades,然后保留最后一个bar。
             self.legacy_trade = None
             self.last_bar = copy.copy(backtesting_data[-1])
