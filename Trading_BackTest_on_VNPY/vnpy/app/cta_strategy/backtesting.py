@@ -309,8 +309,6 @@ class BacktestingEngine:
                 if last_trade.offset == Offset.OPEN:
                     self.legacy_trade = copy.copy(last_trade)
                     # 如果有未平的deal，生成一个对应平仓deal，对应时间最后一个bar
-                    self.write_log(f"存在未平的交易，交易编号{last_trade.tradeid},"
-                                   f"时间{last_trade.datetime},价格{last_trade.price},方向{last_trade.direction}")
                     rollover_trade = copy.copy(last_trade)
                     if last_trade.direction == Direction.LONG:
                         rollover_trade.direction = Direction.SHORT
@@ -325,7 +323,7 @@ class BacktestingEngine:
                     self.output(f"****生成同价位移仓平单，交易编号{rollover_trade.tradeid},"
                                    f"时间{rollover_trade.datetime},合约{rollover_trade.symbol},价格{rollover_trade.price},方向{rollover_trade.direction}")
 
-                    # self.trades.pop(last_trade_tuple[0])
+
 
 
         self.output("历史数据回放结束")

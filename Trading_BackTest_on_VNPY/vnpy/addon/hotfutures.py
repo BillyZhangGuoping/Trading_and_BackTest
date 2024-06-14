@@ -12,7 +12,6 @@ class HotFuturesHandler:
 
     def get_daily_contracts(self, start_date, end_date):
         """使用 jqdatasdk 获取每日合约的方法"""
-        # 使用 jqdatasdk 获取主力合约数据
         self.end = end_date
         data = jq.get_dominant_future(self.hot_code, start_date, end_date)
         # 将数据转换为 Series
@@ -36,12 +35,6 @@ class HotFuturesHandler:
                     })
                 current_contract = contract
                 start_date = date
-            # if self.end == date:
-            #         result.append({
-            #             "start_date": datetime.strptime(start_date, '%Y-%m-%d'),
-            #             "end_date": datetime.strptime(date, '%Y-%m-%d'),
-            #             "contract_code": mddata_client.to_vn_symbol(current_contract)
-            #         })
 
 
         if current_contract:

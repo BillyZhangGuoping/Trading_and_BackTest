@@ -201,6 +201,8 @@ class BarGenerator:
 		# Billy added
 		self.OpenDate = pytz.timezone("Asia/Shanghai").localize(datetime.now())
 
+		# self.generation_rule = load_json()
+
 		self.close_1AM = ['ni']
 		self.close_230AM = ['sc']
 
