@@ -1,0 +1,24 @@
+{
+  "BT_BarJumpTrendDownStrategy": {
+    "class_name": "BarEMaTrendStrategy",
+    "vt_symbol": "fu9999.SHFE",
+    "startDate": "2023-01-01",
+    "endDate": "2024-01-10",
+    "setting": {
+            "init_pos": 0,
+            "init_entry_price": 0,
+            "fixed_size": 1,
+            "pricetick": 1,
+            "HeYueJiaZhi": 100000,
+            "HeYueChengShu": 10.0,
+            "Kxian": [5,15,5],
+            "CLOSE_WINDOWS": [5,15,5],
+            "QUICK_LENGTH":[3,7,2],
+            "SLOW_LENGTH":[20,50,10],
+            "CUT_LENGTH":[3,7,2],
+            "OPEN_RATIO":[0,2.5,0.5],
+            "MARK_DOWN":[4,8,2],
+            "MARK_UP":[4,8,2]
+    }
+  }
+}
