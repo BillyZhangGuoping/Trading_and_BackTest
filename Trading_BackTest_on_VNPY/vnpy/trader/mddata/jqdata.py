@@ -74,14 +74,25 @@ class JqdataClient(MdDataApi):
             vt_symbol = f"{symbol.lower()}.DCE"  # 大商所
         elif exchange == "XINE":
             vt_symbol = f"{symbol.lower()}.INE"  # 上海国际能源期货交易所
+        elif exchange == "XINE":
+            vt_symbol = f"{symbol.lower()}.INE"  # 上海国际能源期货交易所
+        elif exchange == "GFEX":
+            vt_symbol = f"{symbol.lower()}.GFEX"  # 广州能源期货交易所
         elif exchange == "XZCE":
             # 郑商所 的合约代码年份只有三位 需要特殊处理
-
+            # 回测发现如果是201x的数据，会出现TA1405,转换成TA405情况，和TA2405的VN格式重复，为了避免冲突，
+            # 如果是TA1开头，不改为三位，这个代码再203X年代需要再次修改
             # noinspection PyUnboundLocalVariable
-            count = 2
-            product = symbol[:count]
-            month = symbol[count + 1:]
-            vt_symbol = f"{product}{month}.CZCE"
+            if symbol[2] != '2':
+                vt_symbol = f"{symbol}.CZCE"
+
+            else:
+                count = 2
+                product = symbol[:count]
+                month = symbol[count + 1:]
+                vt_symbol = f"{product}{month}.CZCE"
+        else:
+            print(f"{symbol_exchange} 没有对应vt_symbol")
 
         return vt_symbol
 
@@ -104,15 +115,20 @@ class JqdataClient(MdDataApi):
             jq_symbol = f"{symbol}.XDCE"  # 大商所
         elif exchange == Exchange.INE:
             jq_symbol = f"{symbol}.XINE"  # 上海国际能源期货交易所
+        elif exchange == Exchange.GFEX:
+            jq_symbol = f"{symbol}.GFEX"  # 广州期货交易所
         elif exchange == Exchange.CZCE:
             # 郑商所 的合约代码年份只有三位 需要特殊处理
+            # 回测发现如果是201x的数据，会出现TA1405,转换成TA405情况，和TA2405的VN格式重复，为了避免冲突，
+            # 如果是TA1开头，不改为三位，这个代码再203X年代需要再次修改,此时有特殊处理,如果为4位则直接输出
+
             for count, word in enumerate(symbol):
                 if word.isdigit():
                     break
 
             # Check for index symbol
             time_str = symbol[count:]
-            if time_str in ["88", "888", "99", "8888"]:
+            if time_str in ["88", "888", "99", "8888"] or len(time_str) == 4:
                 return f"{symbol}.XZCE"
 
             # noinspection PyUnboundLocalVariable
@@ -140,6 +156,10 @@ class JqdataClient(MdDataApi):
             return f"{symbol} 是当前主力合约"
         else:
             return f"{symbol} 不是当前主力合约，主力合约是{dominant_future}"
+
+    def get_all_symbol(self,date='2024-03-10'):
+        futures = list(jq.get_all_securities(['futures'],date='2024-03-10').index)
+        return futures
 
 
     def query_history(self, req: HistoryRequest):

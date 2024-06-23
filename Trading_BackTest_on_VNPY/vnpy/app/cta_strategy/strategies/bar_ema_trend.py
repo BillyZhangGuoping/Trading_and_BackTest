@@ -222,6 +222,11 @@ class BarEMaTrendStrategy(CtaTemplate):
                     # self.close_indicator = 1
                     self.cancel_all()
                     self.close_request = self.sell(bar.close_price - self.pricetick, self.pos, False)
+                elif bar.close_price > self.high_close:
+                    price = bar.close_price
+                    self.high_close = min(price + self.mark_up, self.high_limit)
+                    # self.sell(self.high_close, trade.volume, False)
+                    self.low_close = price - self.mark_down
                 elif bar.low_price < self.low_close:
                     self.cancel_all()
                     self.sell(bar.close_price - self.pricetick, self.pos, False)
@@ -230,6 +235,11 @@ class BarEMaTrendStrategy(CtaTemplate):
                     # self.close_indicator = -1
                     self.cancel_all()
                     self.close_request = self.cover(bar.close_price + self.pricetick, abs(self.pos), False)
+                elif bar.close_price < self.low_close:
+                    price = bar.close_price
+                    self.high_close = price + self.mark_down
+                    self.low_close = max(price - self.mark_up, self.low_limit)
+                    # self.cover(self.low_close, trade.volume, False)
                 elif bar.high_price > self.high_close:
                     self.cancel_all()
                     self.close_request = self.cover(bar.close_price + self.pricetick, abs(self.pos), False)
@@ -325,12 +335,12 @@ class BarEMaTrendStrategy(CtaTemplate):
             self.close_count_down = self.CLOSE_WINDOWS
             if trade.direction ==  Direction.LONG:
                 self.high_close = min(trade.price + self.mark_up,self.high_limit)
-                self.sell(self.high_close, trade.volume, False)
+                # self.sell(self.high_close, trade.volume, False)
                 self.low_close = trade.price - self.mark_down
             else:
                 self.high_close = trade.price + self.mark_down
                 self.low_close = max(trade.price - self.mark_up, self.low_limit)
-                self.cover(self.low_close, trade.volume, False)
+                # self.cover(self.low_close, trade.volume, False)
 
 
 

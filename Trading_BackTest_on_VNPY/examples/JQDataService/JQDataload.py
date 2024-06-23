@@ -4,14 +4,14 @@ import json
 import time
 from datetime import datetime, timedelta
 from typing import List
-
+import pandas as pd
 import jqdatasdk as jq
 from vnpy.trader.constant import Exchange, Interval
 from vnpy.trader.mddata import mddata_client
 from vnpy.trader.object import (
 	BarData
 )
-from vnpy.trader.database import database_manager
+from vnpy.addon.hotfutures import HotFuturesHandler
 
 
 class JQDataService:
@@ -23,8 +23,6 @@ class JQDataService:
 		# 加载配置
 		config = open('./JQDataConfig.json')
 		self.setting = json.load(config)
-
-
 
 		self.max_min_days = 0
 		self.symbol_data_dict = {}
@@ -52,7 +50,7 @@ class JQDataService:
 		df = jq.get_price(
 			jq_symbol,
 			frequency=interval,
-			fields=['open','close','low','high','volume','money'],
+			fields=['open','high','low','close','volume','money','open_interest'],
 			start_date=start,
 			end_date=end,
 			skip_paused=True
@@ -72,6 +70,7 @@ class JQDataService:
 					low_price=row["low"],
 					close_price=row["close"],
 					volume=row["volume"],
+					open_interest=row["open_interest"],
 					gateway_name="JQ"
 				)
 				data.append(bar)
@@ -105,7 +104,6 @@ class JQDataService:
 			print('-' * 50)
 			print(u'合约数据下载完成')
 			print('-' * 50)
-
 		return
 
 	def compareMaxMin(self,rangeday = 365, days = 3):
@@ -124,7 +122,36 @@ class JQDataService:
 			compareResult += self.newCompare(value, key, startDt, days)
 		return compareResult
 
+	def downloadHotSymbol(self,hot_symbol,startDt = 0,enddt = 0):
+		"""传入合约头两位，转为主力合约字典，然后使用query_history输出dataframe，
+		再增加一行作为合约名称，最后用save_to_csv
+		"""
 
+		startDt  = startDt
+		enddt = datetime.today()
+		hot_handler = HotFuturesHandler(hot_symbol)
+		download_list = hot_handler.get_daily_contracts(startDt, enddt)
+		# 生成空的 DataFrame
+		hotdf_list = []
+		for backtest_item in download_list:
+			start = backtest_item['start_date']
+			end = backtest_item['end_date']
+			VNSymbol = backtest_item['contract_code']
+			print(
+				f"----------------------"
+				f"从{backtest_item['start_date']} 到 {backtest_item['end_date']} 的"
+				f"主力合约是 {backtest_item['contract_code']}")
+			symbol = VNSymbol.split(".")[0]
+			exchange = Exchange(VNSymbol.split(".")[1])
+			df = self.query_history(symbol, exchange, start, end, interval='1d')
+			df['symbol'] = VNSymbol
+			col_a = df['symbol']
+			df = df.drop('symbol', axis=1)
+			df.insert(0, 'symbol', col_a)
+
+			hotdf_list.append(df)
+		hot_daily_result = pd.concat(hotdf_list)
+		self.save_csv_more(resultData=hot_daily_result,name= hot_symbol)
 
 	def downloadAllDayBar(self, days=0,startDt = 0):
 		"""下载所有配置中的合约的分钟线数据"""
@@ -139,7 +166,6 @@ class JQDataService:
 		print('-' * 50)
 		print(u'开始下载日期日线数据')
 		print('-' * 50)
-
 
 		if 'Bar.Min' in self.setting:
 			l = self.setting["Bar.Min"]
@@ -212,21 +238,35 @@ class JQDataService:
 		return df
 
 
-	def save_csv_more(self, resultData,name = "data") -> None:
+	def save_csv_more(self,resultData,name = "data") -> None:
 		"""
         Save table data into a csv file
         """
 		# path, _ = QtWidgets.QFileDialog.getSaveFileName(
 		# 	self, "保存数据", "", "xls(*.xls)")
-		path = "C:\\Users\\i333248\\OneDrive - SAP SE\\Desktop\\Downloads\\" + name + ".xls"
+		path = "C:\\Desktop\\Downloads\\" + name + ".csv"
 		if not path:
 			return
 		# resultdata.to_excel(path)
 		with open(path, "w", encoding='utf-8-sig') as f:
-			resultData.to_excel(path)
+			resultData.to_csv(path)
 
 
 if __name__ == '__main__':
 	JQdata = JQDataService()
+	date_str = '2014-1-15'
+	date = datetime.strptime(date_str, '%Y-%m-%d')
+	enddt = date.today()
+	symol_list = mddata_client.get_all_symbol(date =enddt)
+	filtered_symbols = [symbol for symbol in symol_list if '8888' in symbol]
+	new_list = list(set([symbol.split('8888')[0] for symbol in filtered_symbols]))
 
+	# JQdata.downloadHotSymbol("PM", startDt=date, enddt=enddt)
+	starttime = datetime.now()
+	for hot in new_list:
+		print(hot)
+		JQdata.downloadHotSymbol(hot,startDt=date,enddt = enddt)
+	print("starttime: %s and fisish time: %s" %(starttime,datetime.now()))
+
+	print("cost time : %s" %str(datetime.now()-starttime))
 
