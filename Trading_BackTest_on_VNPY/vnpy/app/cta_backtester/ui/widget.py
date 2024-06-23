@@ -359,7 +359,7 @@ class BacktesterManager(QtWidgets.QWidget):
         Save table data into a csv file
         """
 
-        filepath  = r"C:\Users\i333248\OneDrive - SAP SE\Desktop"
+        filepath  = r"C:\\test_data\\"
         Optimization_summary = self.backtestSetting["品种"] + "_" + self.backtestSetting["策略名"] + "_" +  self.backtestSetting["测试时间"][0:10]
         filename = Optimization_summary + ".csv"
 

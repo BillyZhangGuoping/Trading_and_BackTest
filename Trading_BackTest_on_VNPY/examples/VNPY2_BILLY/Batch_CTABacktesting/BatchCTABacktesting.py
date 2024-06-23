@@ -28,7 +28,7 @@ class BatchCTABackTest:
 	提供批量CTA策略回测，输出结果到excel或pdf，和CTA策略批量优化，输出结果到excel或pdf，
 	"""
 
-	def __init__(self, vtSymbolconfig="SymbolSize.json", exportpath="C:\\Users\\I333248\\OneDrive - SAP SE\\Desktop\\New folder\\OPNEW\\"):
+	def __init__(self, vtSymbolconfig="SymbolSize.json", exportpath="C:\\test_data\\OPNEW\\"):
 		"""
 		加载配置路径
 		"""

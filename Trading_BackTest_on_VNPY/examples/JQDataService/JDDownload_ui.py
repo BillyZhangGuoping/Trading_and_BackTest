@@ -173,7 +173,6 @@ class DownloadManager(QtWidgets.QWidget):
 
         path, _ = QtWidgets.QFileDialog.getSaveFileName(
             self, "保存数据", "", "xlsx(*.xlsx)")
-        # path = "C:\\Users\\i333248\\OneDrive - SAP SE\\Desktop\\Downloads\\abx.xlsx"
         if not path:
             return
         # resultdata.to_excel(path)

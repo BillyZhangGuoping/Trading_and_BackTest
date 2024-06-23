@@ -244,7 +244,7 @@ class JQDataService:
         """
 		# path, _ = QtWidgets.QFileDialog.getSaveFileName(
 		# 	self, "保存数据", "", "xls(*.xls)")
-		path = "C:\\Desktop\\Downloads\\" + name + ".csv"
+		path = "C:\\test_data\\" + name + ".csv"
 		if not path:
 			return
 		# resultdata.to_excel(path)
