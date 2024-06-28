@@ -75,6 +75,6 @@ class HotFuturesHandler:
             return None
 
 if __name__=='__main__':
-    hot_handler = HotFuturesHandler('i')
-    hotlist = hot_handler.get_daily_contracts(datetime.strptime("2021-5-12", '%Y-%m-%d'),datetime.strptime("2024-5-12", '%Y-%m-%d'))
+    hot_handler = HotFuturesHandler('IC')
+    hotlist = hot_handler.get_daily_contracts(datetime.strptime("2024-1-12", '%Y-%m-%d'),datetime.strptime("2024-1-31" , '%Y-%m-%d'))
     print(hotlist)

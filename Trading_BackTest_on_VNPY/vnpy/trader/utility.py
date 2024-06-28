@@ -206,10 +206,17 @@ class BarGenerator:
 		self.close_1AM = ['ni']
 		self.close_230AM = ['sc']
 
-		self.hour_1_list = [time(9, 59), time(10, 59), time(11, 29), time(13, 59), time(14, 59), time(21, 59),
-		                    time(22, 59), time(23, 59), time(0, 59), time(1, 59), time(2, 29)]
-		self.hour_day_list = [time(11, 29), time(14, 59)]
-		self.hour_list_230AM = [time(23, 59), time(2, 29)]
+		# self.hour_1_list = [time(9, 59), time(10, 59), time(11, 29), time(13, 59), time(14, 59), time(21, 59),
+		#                     time(22, 59), time(23, 59), time(0, 59), time(1, 59), time(2, 29)]
+
+
+		# self.hour_day_list = [time(11, 29), time(14, 59)]
+		# self.hour_list_230AM = [time(23, 59), time(2, 29)]
+
+		# new hour list for hour gerenation logic
+		self.hour_1_list = [time(9, 00), time(10, 00), time(11, 00), time(13, 30), time(14, 00), time(21, 00),
+		                    time(22, 00), time(23, 00), time(0, 00), time(1, 00), time(2, 00)]
+		self.longer_list = [time(9, 00),time(13, 30),time(21,00)]
 
 	def update_tick(self, tick: TickData) -> None:
 		"""
@@ -322,25 +329,37 @@ class BarGenerator:
 		elif self.interval == Interval.HOUR:
 			# if bar.datetime < self.OpenDate:
 			#     return
+
+			# new hour generation logic, based on the next minute, for example, 10:00 is finished trigger for the 9:00- 10:00 hour.
 			if self.window == 1:
 				if bar.datetime.time() in self.hour_1_list:
 					finished = True
-			elif self.window == 3:
-				if bar.datetime.time() in self.hour_day_list:
-					finished = True
-				elif bar.datetime.time() == time(22, 59) and bar.symbol[:2] not in self.close_230AM:
-					finished = True
-				elif bar.datetime.time() in self.hour_list_230AM and bar.symbol[:2] in self.close_230AM:
+			elif self.window == 3 or self.window == 4:
+				if bar.datetime.time() in self.longer_list:
 					finished = True
 
-			elif self.window == 4:
-				if bar.datetime.time() in self.hour_day_list:
-					finished = True
-				elif bar.datetime.time() == time(22, 59) and bar.symbol[:2] not in self.close_1AM:
-					finished = True
-				elif bar.datetime.time() == time(0, 59) and bar.symbol[:2] in self.close_1AM:
-					finished = True
+
+			# old hour generation logic, based on the current minute,
+			# if self.window == 1:
+			# 	if bar.datetime.time() in self.hour_1_list:
+			# 		finished = True
+			# elif self.window == 3:
+			# 	if bar.datetime.time() in self.hour_day_list:
+			# 		finished = True
+			# 	elif bar.datetime.time() == time(22, 59) and bar.symbol[:2] not in self.close_230AM:
+			# 		finished = True
+			# 	elif bar.datetime.time() in self.hour_list_230AM and bar.symbol[:2] in self.close_230AM:
+			# 		finished = True
+			#
+			# elif self.window == 4:
+			# 	if bar.datetime.time() in self.hour_day_list:
+			# 		finished = True
+			# 	elif bar.datetime.time() == time(22, 59) and bar.symbol[:2] not in self.close_1AM:
+			# 		finished = True
+			# 	elif bar.datetime.time() == time(0, 59) and bar.symbol[:2] in self.close_1AM:
+			# 		finished = True
 			"""
+			# old vnpy logic, only focus on the 1 hour generation.
             if self.last_bar:
                 new_hour = bar.datetime.hour != self.last_bar.datetime.hour
                 last_minute = bar.datetime.minute == 59

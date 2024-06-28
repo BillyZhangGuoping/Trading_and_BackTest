@@ -50,30 +50,31 @@ class JQDataService:
 		df = jq.get_price(
 			jq_symbol,
 			frequency=interval,
-			fields=['open','high','low','close','volume','money','open_interest'],
+			fields=['open','high','low','close','volume','money','high_limit',
+					'low_limit','avg','open_interest'],
 			start_date=start,
 			end_date=end,
 			skip_paused=True
 		)
 
-		data: List[BarData] = []
-
-		if df is not None:
-			for ix, row in df.iterrows():
-				bar = BarData(
-					symbol=symbol,
-					exchange=exchange,
-					interval=Interval.MINUTE,
-					datetime=row.name.to_pydatetime() - timedelta(minutes=1),
-					open_price=row["open"],
-					high_price=row["high"],
-					low_price=row["low"],
-					close_price=row["close"],
-					volume=row["volume"],
-					open_interest=row["open_interest"],
-					gateway_name="JQ"
-				)
-				data.append(bar)
+		# data: List[BarData] = []
+		#
+		# if df is not None:
+		# 	for ix, row in df.iterrows():
+		# 		bar = BarData(
+		# 			symbol=symbol,
+		# 			exchange=exchange,
+		# 			interval=Interval.MINUTE,
+		# 			datetime=row.name.to_pydatetime() - timedelta(minutes=1),
+		# 			open_price=row["open"],
+		# 			high_price=row["high"],
+		# 			low_price=row["low"],
+		# 			close_price=row["close"],
+		# 			volume=row["volume"],
+		# 			open_interest=row["open_interest"],
+		# 			gateway_name="JQ"
+		# 		)
+		# 		data.append(bar)
 
 		return df
 
@@ -128,7 +129,7 @@ class JQDataService:
 		"""
 
 		startDt  = startDt
-		enddt = datetime.today()
+		enddt = enddt
 		hot_handler = HotFuturesHandler(hot_symbol)
 		download_list = hot_handler.get_daily_contracts(startDt, enddt)
 		# 生成空的 DataFrame
@@ -143,13 +144,17 @@ class JQDataService:
 				f"主力合约是 {backtest_item['contract_code']}")
 			symbol = VNSymbol.split(".")[0]
 			exchange = Exchange(VNSymbol.split(".")[1])
-			df = self.query_history(symbol, exchange, start, end, interval='1d')
+			df = self.query_history(symbol, exchange, start - timedelta(days= 15), end, interval='1d')
+			df['pre_close'] = df['close'].shift(1)
+			df = df.iloc[1:]  # 删除第一行
 			df['symbol'] = VNSymbol
 			col_a = df['symbol']
 			df = df.drop('symbol', axis=1)
 			df.insert(0, 'symbol', col_a)
+			  # 请将此处替换为您实际的起始日期
+			new_df = df[df.index >= start]
 
-			hotdf_list.append(df)
+			hotdf_list.append(new_df)
 		hot_daily_result = pd.concat(hotdf_list)
 		self.save_csv_more(resultData=hot_daily_result,name= hot_symbol)
 
@@ -261,7 +266,7 @@ if __name__ == '__main__':
 	filtered_symbols = [symbol for symbol in symol_list if '8888' in symbol]
 	new_list = list(set([symbol.split('8888')[0] for symbol in filtered_symbols]))
 
-	# JQdata.downloadHotSymbol("PM", startDt=date, enddt=enddt)
+	# JQdata.downloadHotSymbol("TA", startDt=date, enddt=enddt)
 	starttime = datetime.now()
 	for hot in new_list:
 		print(hot)
